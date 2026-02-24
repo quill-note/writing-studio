@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#e87b6b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="創作管理">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192x192.png">
+<title>創作管理</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<style>
+  :root {
+    --primary: #e87b6b;
+    --primary-dark: #c9584a;
+    --primary-light: #f5a99e;
+    --primary-pale: #fdf0ee;
+    --secondary: #d4778b;
+    --secondary-light: #f0b8c5;
+    --accent: #c4606c;
+    --bg: #fef8f7;
+    --surface: #ffffff;
+    --surface2: #fdf3f2;
+    --border: #f0d5d1;
+    --text: #4a2525;
+    --text2: #7a4545;
+    --text3: #aa7777;
+    --tag-bg: #fce8e5;
+    --tag-text: #c4474a;
+    --shadow: rgba(232,123,107,0.15);
+  }
+  .mi {
+    font-family: 'Material Icons Round';
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    vertical-align: middle;
+    user-select: none;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 70px;
+  }
+
+  /* ヘッダー */
+  .header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 14px 16px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .header h1 {
+    font-size: 20px;
+    color: var(--primary);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-icon {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary-pale);
+    color: var(--primary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .btn-icon:hover { background: var(--border); }
+
+  /* 検索・フィルター */
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .search-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface2);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+  }
+  .search-wrap input:focus { border-color: var(--primary-light); }
+  .search-icon {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .btn-add {
+    padding: 8px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .btn-add:hover { background: var(--primary-dark); }
+
+  /* タグフィルター */
+  .tag-filter-wrap {
+    padding: 8px 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    display: flex;
+    gap: 6px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .tag-filter-wrap::-webkit-scrollbar { display: none; }
+  .tag-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .tag-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  /* カードリスト */
+  .card-list {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 6px var(--shadow);
+    transition: box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .card:hover { box-shadow: 0 4px 12px var(--shadow); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .card-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .card-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-public { background: #e8f5e9; color: #388e3c; }
+  .badge-private { background: #fff3e0; color: #f57c00; }
+  .badge-long { background: #e3f2fd; color: #1976d2; }
+  .badge-short { background: #f3e5f5; color: #7b1fa2; }
+  .badge-draft { background: #fce4ec; color: #c2185b; }
+
+  .card-work {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .card-reading {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    cursor: pointer;
+  }
+  .tag:hover { background: var(--primary-light); color: white; }
+
+  /* ナビゲーション */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 2px solid var(--border);
+    display: flex;
+    z-index: 100;
+    box-shadow: 0 -2px 10px var(--shadow);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text3);
+    font-size: 10px;
+    gap: 2px;
+    transition: color 0.2s;
+  }
+  .nav-item.active { color: var(--primary); }
+  .nav-icon { font-size: 22px; }
+
+  /* ページ */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* 空状態 */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* モーダル */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(74,37,37,0.4);
+    z-index: 200;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .modal-overlay.active { display: flex; align-items: flex-start; justify-content: center; padding-top: 40px; }
+  .modal {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 8px 30px rgba(74,37,37,0.2);
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 16px;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 4px;
+    display: block;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface2);
+    outline: none;
+    font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--primary-light);
+  }
+  .form-textarea { min-height: 80px; resize: vertical; }
+
+  /* タグ入力エリア */
+  .tag-input-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+    min-height: 42px;
+    align-items: center;
+  }
+  .tag-input-area input {
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+    min-width: 80px;
+  }
+  .tag-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .tag-remove {
+    cursor: pointer;
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  /* プラットフォーム選択 */
+  .platform-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .platform-btn {
+    padding: 5px 12px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .platform-btn.selected {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  /* モーダルアクション */
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .btn-cancel {
+    flex: 1;
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .btn-save {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-save:hover { background: var(--primary-dark); }
+  .btn-delete {
+    flex: 1;
+    padding: 12px;
+    border: 1.5px solid #f44336;
+    border-radius: 10px;
+    background: white;
+    color: #f44336;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* 詳細ビュー */
+  .detail-section {
+    padding: 16px;
+  }
+  .detail-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--primary);
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .detail-name {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .detail-reading {
+    font-size: 13px;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+  .detail-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+  .detail-key {
+    font-size: 12px;
+    color: var(--text3);
+    min-width: 80px;
+    padding-top: 2px;
+  }
+  .detail-val {
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+  }
+  .detail-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+  .detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .detail-actions {
+    position: fixed;
+    bottom: 70px;
+    left: 0; right: 0;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+
+  /* コンテストページ */
+  .contest-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px var(--shadow);
+  }
+  .contest-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .contest-detail {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+
+  /* 辞書ページ */
+  .dict-category {
+    padding: 12px 16px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .dict-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 0 16px 8px;
+  }
+  .dict-word {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .dict-desc {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  /* バックアップページ */
+  .backup-page {
+    padding: 20px 16px;
+  }
+  .backup-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 20px;
+  }
+  .backup-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 10px;
+    border: none;
+    transition: opacity 0.2s;
+  }
+  .backup-btn:hover { opacity: 0.85; }
+  .backup-export { background: var(--primary); color: white; }
+  .backup-import { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); }
+  .backup-note {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .pwa-section {
+    background: var(--primary-pale);
+    border: 1.5px solid var(--primary-light);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 20px;
+  }
+  .pwa-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .pwa-step {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+
+  /* アラート */
+  .confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(74,37,37,0.5);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .confirm-overlay.active { display: flex; }
+  .confirm-box {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 8px 30px rgba(74,37,37,0.2);
+  }
+  .confirm-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .confirm-msg {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+  }
+  .confirm-btns {
+    display: flex;
+    gap: 8px;
+  }
+  .confirm-cancel {
+    flex: 1;
+    padding: 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .confirm-ok {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #f44336;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* 作品タイトル候補 */
+  .datalist-hint {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .section-label {
+    font-size: 12px;
+    color: var(--text3);
+    font-weight: 600;
+    padding: 8px 16px 4px;
+    letter-spacing: 0.05em;
+  }
+
+  /* 検索付きセレクト */
+  .searchable-select { position: relative; }
+  .select-list {
+    display: none;
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    z-index: 10;
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+  .select-list.open { display: block; }
+  .select-item {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+  }
+  .select-item:last-child { border-bottom: none; }
+  .select-item:hover, .select-item:active { background: var(--primary-pale); }
+  .select-item.add-new {
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .stat-bar {
+    display: flex;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-item {
+    text-align: center;
+    flex: 1;
+  }
+  .stat-num {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text3);
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== 人物ページ ========== -->
+<div id="page-character" class="page active">
+  <div class="header">
+    <div class="header-top">
+      <h1>創作管理</h1>
+      <div class="header-actions">
+        <button class="btn-icon" onclick="openBackupPage()" title="バックアップ"><span class="mi">backup</span></button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <div class="search-wrap">
+        <span class="search-icon mi" style="font-size:16px">search</span>
+        <input type="text" id="char-search" placeholder="キャラクター検索..." oninput="renderCharacters()">
+      </div>
+      <button class="btn-add" onclick="openAddCharModal()">＋ 追加</button>
+    </div>
+  </div>
+  <div class="tag-filter-wrap" id="char-tag-filter"></div>
+  <div id="char-stat" class="stat-bar" style="display:none"></div>
+  <div class="card-list" id="char-list"></div>
+</div>
+
+<!-- ========== コンテストページ ========== -->
+<div id="page-contest" class="page">
+  <div class="header">
+    <div class="header-top">
+      <h1>コンテスト</h1>
+      <button class="btn-add" onclick="openAddContestModal()">＋ 追加</button>
+    </div>
+    <div class="search-bar">
+      <div class="search-wrap">
+        <span class="search-icon mi" style="font-size:16px">search</span>
+        <input type="text" id="contest-search" placeholder="コンテスト検索..." oninput="renderContests()">
+      </div>
+    </div>
+  </div>
+  <div class="tag-filter-wrap" id="contest-tag-filter"></div>
+  <div id="contest-stat" class="stat-bar" style="display:none"></div>
+  <div class="card-list" id="contest-list"></div>
+</div>
+
+<!-- ========== 辞書ページ ========== -->
+<div id="page-dict" class="page">
+  <div class="header">
+    <div class="header-top">
+      <h1>辞書</h1>
+      <button class="btn-add" onclick="openAddDictModal()">＋ 追加</button>
+    </div>
+    <div class="search-bar">
+      <div class="search-wrap">
+        <span class="search-icon mi" style="font-size:16px">search</span>
+        <input type="text" id="dict-search" placeholder="表現検索..." oninput="renderDict()">
+      </div>
+    </div>
+  </div>
+  <div class="tag-filter-wrap" id="dict-tag-filter"></div>
+  <div id="dict-stat" class="stat-bar" style="display:none"></div>
+  <div id="dict-list" class="card-list"></div>
+</div>
+
+<!-- ========== バックアップページ ========== -->
+<div id="page-backup" class="page">
+  <div class="header">
+    <div class="header-top">
+      <h1>バックアップ</h1>
+      <button class="btn-icon" onclick="showPage('page-character')" title="戻る"><span class="mi">close</span></button>
+    </div>
+  </div>
+  <div class="backup-page">
+    <p class="backup-note">
+      データはこの端末のストレージに保存されています。<br>
+      定期的にバックアップを取ることをお勧めします。
+    </p>
+    <div style="font-size:12px; font-weight:700; color:var(--text3); margin-bottom:8px; letter-spacing:0.05em">エクスポート</div>
+    <button class="backup-btn backup-export" onclick="exportData('json')"><span class="mi" style="font-size:18px;margin-right:6px">upload_file</span>JSONでエクスポート</button>
+    <button class="backup-btn backup-export" style="background:var(--secondary); margin-top:6px" onclick="exportData('txt')"><span class="mi" style="font-size:18px;margin-right:6px">text_snippet</span>テキストメモ(.txt)でエクスポート</button>
+    <div style="font-size:12px; font-weight:700; color:var(--text3); margin:16px 0 8px; letter-spacing:0.05em">インポート</div>
+    <label class="backup-btn backup-import" style="display:block; text-align:center; cursor:pointer;">
+      <span class="mi" style="font-size:18px;margin-right:6px">download</span>JSONをインポート
+      <input type="file" accept=".json,.txt" style="display:none" onchange="importData(event)">
+    </label>
+    <button class="backup-btn backup-import" style="margin-top:8px" onclick="openCsvImport()"><span class="mi" style="font-size:18px;margin-right:6px">table_rows</span>登場人物リストを一括インポート（CSV貼り付け）</button>
+    <div class="pwa-section">
+      <div class="pwa-title"><span class="mi" style="font-size:16px;margin-right:4px">smartphone</span>ホーム画面に追加する方法</div>
+      <div class="pwa-step" style="margin-top:6px">【Android / Chrome の場合】</div>
+      <div class="pwa-step">① Chromeでこのページを開く</div>
+      <div class="pwa-step">② 右上のメニュー（⋮）をタップ</div>
+      <div class="pwa-step">③「ホーム画面に追加」または「アプリをインストール」を選択</div>
+      <div class="pwa-step" style="margin-top:10px">【iPhone / Safari の場合】</div>
+      <div class="pwa-step">① Safariでこのページを開く</div>
+      <div class="pwa-step">② 下部の共有ボタン（四角に矢印）をタップ</div>
+      <div class="pwa-step">③「ホーム画面に追加」を選択</div>
+      <div class="pwa-step" style="margin-top:10px;color:var(--primary);font-size:12px;font-weight:600">アプリのように全画面で起動します！</div>
+    </div>
+    <div class="pwa-section" style="margin-top:12px">
+      <div class="pwa-title"><span class="mi" style="font-size:16px;margin-right:4px">sync</span>PC⇔スマホでデータを共有</div>
+      <div class="pwa-step">① 片方の端末でJSONエクスポート</div>
+      <div class="pwa-step">② ファイルをGoogle Driveなどに保存</div>
+      <div class="pwa-step">③ もう一方の端末でダウンロード→インポート</div>
+    </div>
+    <div style="margin-top:20px; padding:14px; background:var(--surface2); border-radius:12px; border:1px solid var(--border)">
+      <div style="font-size:13px; font-weight:700; color:var(--text2); margin-bottom:8px"><span class="mi" style="font-size:16px;margin-right:4px">bar_chart</span>現在のデータ件数</div>
+      <div id="backup-stats" style="font-size:14px; color:var(--text)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 詳細ビュー ========== -->
+<div id="page-detail" class="page">
+  <div class="header">
+    <div class="header-top">
+      <div class="detail-back" onclick="closeDetail()">
+        ← 戻る
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" onclick="editCurrentChar()"><span class="mi">edit</span></button>
+        <button class="btn-icon" style="color:#f44336" onclick="deleteCurrentChar()"><span class="mi">delete_outline</span></button>
+      </div>
+    </div>
+  </div>
+  <div id="detail-content" class="detail-section"></div>
+</div>
+
+<!-- ========== ナビゲーション ========== -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-character" onclick="showPage('page-character')">
+    <span class="nav-icon mi">person_outline</span>人物
+  </button>
+  <button class="nav-item" id="nav-contest" onclick="showPage('page-contest')">
+    <span class="nav-icon mi">emoji_events</span>コンテスト
+  </button>
+  <button class="nav-item" id="nav-dict" onclick="showPage('page-dict')">
+    <span class="nav-icon mi">menu_book</span>辞書
+  </button>
+</nav>
+
+<!-- ========== キャラクター追加/編集モーダル ========== -->
+<div class="modal-overlay" id="char-modal">
+  <div class="modal">
+    <div class="modal-title" id="char-modal-title">キャラクター追加</div>
+    <div class="form-group">
+      <label class="form-label">名字・名前 *</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" class="form-input" id="f-lastname" placeholder="名字" style="flex:1">
+        <input type="text" class="form-input" id="f-firstname" placeholder="名前" style="flex:1">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">名字カナ・名前カナ</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" class="form-input" id="f-lastname-kana" placeholder="名字カナ" style="flex:1">
+        <input type="text" class="form-input" id="f-firstname-kana" placeholder="名前カナ" style="flex:1">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">作品名 *</label>
+      <div class="searchable-select" id="f-work-wrap">
+        <input type="text" class="form-input" id="f-work-input" placeholder="作品名を検索または入力" autocomplete="off"
+          onfocus="showWorkList('f')" oninput="filterWorkList('f')">
+        <div class="select-list" id="f-work-list"></div>
+      </div>
+      <input type="hidden" id="f-work">
+    </div>
+    <div class="form-group">
+      <label class="form-label">公開状態</label>
+      <select class="form-select" id="f-status">
+        <option value="">未設定</option>
+        <option value="公開">公開</option>
+        <option value="非公開">非公開</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">種別</label>
+      <select class="form-select" id="f-length">
+        <option value="">未設定</option>
+        <option value="長編">長編</option>
+        <option value="短編">短編</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">投稿先</label>
+      <div class="platform-select" id="platform-select">
+        <button class="platform-btn" onclick="togglePlatform(this)">pixiv</button>
+        <button class="platform-btn" onclick="togglePlatform(this)">エブリスタ</button>
+        <button class="platform-btn" onclick="togglePlatform(this)">ノベマ！</button>
+        <button class="platform-btn" onclick="togglePlatform(this)">カクヨム</button>
+        <button class="platform-btn" onclick="togglePlatform(this)">小説家になろう</button>
+      </div>
+      <div style="margin-top:6px; display:flex; gap:6px;">
+        <input type="text" class="form-input" id="f-platform-custom" placeholder="その他の投稿先" style="flex:1; font-size:12px;">
+        <button onclick="addCustomPlatform()" style="padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px;">追加</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <textarea class="form-textarea" id="f-memo" placeholder="自由記入欄"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('char-modal')">キャンセル</button>
+      <button id="char-delete-btn" class="btn-delete" onclick="deleteCharFromModal()" style="display:none">削除</button>
+      <button class="btn-save" onclick="saveChar()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== コンテスト追加モーダル ========== -->
+<div class="modal-overlay" id="contest-modal">
+  <div class="modal">
+    <div class="modal-title" id="contest-modal-title">コンテスト追加</div>
+    <div class="form-group">
+      <label class="form-label">コンテスト名 *</label>
+      <input type="text" class="form-input" id="fc-name" placeholder="例: ノベマBL青春小説コンテスト">
+    </div>
+    <div class="form-group">
+      <label class="form-label">応募作品</label>
+      <div class="searchable-select" id="fc-work-wrap">
+        <input type="text" class="form-input" id="fc-work-input" placeholder="作品名を検索または入力" autocomplete="off"
+          onfocus="showWorkList('fc')" oninput="filterWorkList('fc')">
+        <div class="select-list" id="fc-work-list"></div>
+      </div>
+      <input type="hidden" id="fc-work">
+    </div>
+    <div class="form-group">
+      <label class="form-label">執筆時期タグ</label>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <div class="searchable-select" style="flex:1" id="fc-tag-wrap">
+          <div class="tag-input-area" id="contest-tag-area">
+            <input type="text" id="fc-tag-input" placeholder="例: 2025年春"
+              onkeydown="handleContestTagInput(event)" oninput="filterTagSuggestions('contest')" onfocus="filterTagSuggestions('contest')">
+          </div>
+          <div class="select-list" id="contest-tag-suggestions"></div>
+        </div>
+        <button onclick="addContestTagByBtn()" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px; white-space:nowrap;">追加</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL</label>
+      <input type="url" class="form-input" id="fc-url" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">結果発表時期</label>
+      <input type="text" class="form-input" id="fc-result-period" placeholder="例: 2025年9月中旬頃予定">
+    </div>
+    <div class="form-group">
+      <label class="form-label">結果</label>
+      <select class="form-select" id="fc-status">
+        <option value="">未設定</option>
+        <option value="提出済み">提出済み</option>
+        <option value="一次">一次</option>
+        <option value="二次">二次</option>
+        <option value="最終">最終</option>
+        <option value="受賞">受賞</option>
+        <option value="落選">落選</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">掲載サイト</label>
+      <div class="platform-select" id="contest-platform-select"></div>
+      <div style="margin-top:6px; display:flex; gap:6px;">
+        <input type="text" class="form-input" id="fc-platform-custom" placeholder="その他のサイト" style="flex:1; font-size:12px;">
+        <button onclick="addContestCustomPlatform()" style="padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px;">追加</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <textarea class="form-textarea" id="fc-memo" placeholder="賞の詳細、規定など"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('contest-modal')">キャンセル</button>
+      <button id="contest-delete-btn" class="btn-delete" onclick="deleteContestFromModal()" style="display:none">削除</button>
+      <button class="btn-save" onclick="saveContest()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 辞書追加モーダル ========== -->
+<div class="modal-overlay" id="dict-modal">
+  <div class="modal">
+    <div class="modal-title" id="dict-modal-title">表現追加</div>
+    <div class="form-group">
+      <label class="form-label">内容 *</label>
+      <textarea class="form-textarea" id="fd-word" placeholder="例: 胸の奥がじんわりと温かくなる"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">補足・メモ</label>
+      <textarea class="form-textarea" id="fd-desc" placeholder="使いたい場面や補足メモなど"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">タグ（複数可）</label>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <div class="searchable-select" style="flex:1" id="fd-tag-wrap">
+          <div class="tag-input-area" id="dict-tag-area">
+            <input type="text" id="fd-tag-input" placeholder="例: 切なさ、恋"
+              onkeydown="handleDictTagInput(event)" oninput="filterTagSuggestions('dict')" onfocus="filterTagSuggestions('dict')">
+          </div>
+          <div class="select-list" id="dict-tag-suggestions"></div>
+        </div>
+        <button onclick="addDictTagByBtn()" style="padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px; white-space:nowrap;">追加</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('dict-modal')">キャンセル</button>
+      <button id="dict-delete-btn" class="btn-delete" onclick="deleteDictFromModal()" style="display:none">削除</button>
+      <button class="btn-save" onclick="saveDict()">保存</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== CSVインポートモーダル ========== -->
+<div class="modal-overlay" id="csv-modal">
+  <div class="modal">
+    <div class="modal-title">登場人物リスト一括インポート</div>
+    <p style="font-size:12px; color:var(--text2); margin-bottom:8px; line-height:1.7">
+      スプレッドシートからコピーした内容を貼り付けてください。<br>
+      1行目がヘッダー行の場合は自動で読み飛ばします。
+    </p>
+    <p style="font-size:11px; color:var(--text3); margin-bottom:12px; background:var(--surface2); padding:8px; border-radius:8px; line-height:1.8">
+      列の順番：<b>名字・名前・名字カナ・名前カナ・作品名・公開状態・種別</b><br>
+      ※ タブ区切り・カンマ区切りどちらも対応
+    </p>
+    <textarea class="form-textarea" id="csv-input" placeholder="例（スプレッドシートからコピー）:&#10;三沢&#9;太郎&#9;ミサワ&#9;タロウ&#9;君と、いつまでも&#9;公開&#9;長編&#10;小菅&#9;花子&#9;コスゲ&#9;ハナコ&#9;君と、いつまでも&#9;非公開&#9;短編" style="min-height:160px; font-size:12px"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('csv-modal')">キャンセル</button>
+      <button class="btn-save" onclick="executeCsvImport()">インポート実行</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 確認ダイアログ ========== -->
+<div class="confirm-overlay" id="confirm-dialog">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">確認</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">キャンセル</button>
+      <button class="confirm-ok" id="confirm-ok-btn" onclick="execConfirm()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== データ管理 ====================
+const STORAGE_KEYS = { chars: 'sosaku_chars', contests: 'sosaku_contests', dict: 'sosaku_dict' };
+const useCS = !!(window.storage && window.storage.get);
+
+function loadData(key) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS[key]);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveData(key, data) {
+  try { localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {}
+  if (useCS) { try { window.storage.set(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {} }
+}
+
+async function initFromClaudeStorage() {
+  if (!useCS) return;
+  for (const [key, skey] of Object.entries(STORAGE_KEYS)) {
+    try {
+      const r = await window.storage.get(skey);
+      if (r && r.value) {
+        const data = JSON.parse(r.value);
+        if (data.length > 0) {
+          localStorage.setItem(skey, r.value);
+          if (key === 'chars') characters = data;
+          if (key === 'contests') contests = data;
+          if (key === 'dict') dictItems = data;
+        }
+      }
+    } catch(e) {}
+  }
+  renderCharacters(); renderContests(); renderDict();
+}
+
+let characters = loadData('chars');
+let contests = loadData('contests');
+let dictItems = loadData('dict');
+
+// ==================== ページ管理 ====================
+let currentPage = 'page-character';
+let detailPrevPage = 'page-character';
+
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navMap = { 'page-character': 'nav-character', 'page-contest': 'nav-contest', 'page-dict': 'nav-dict' };
+  if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
+  currentPage = pageId;
+  if (pageId === 'page-backup') updateBackupStats();
+  if (pageId === 'page-character') renderCharacters();
+  if (pageId === 'page-contest') renderContests();
+  if (pageId === 'page-dict') renderDict();
+}
+
+function openBackupPage() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-backup').classList.add('active');
+  updateBackupStats();
+}
+
+// ==================== フィルター状態 ====================
+let charFilterPlatforms = [];
+let contestFilterStatus = '';
+let contestFilterSite = '';
+let contestFilterTag = '';
+let dictActiveTag = [];
+
+// ==================== キャラクター ====================
+function renderCharacters() {
+  const search = document.getElementById('char-search').value.toLowerCase();
+  let list = characters.filter(c => {
+    const matchSearch = !search ||
+      c.name?.toLowerCase().includes(search) ||
+      c.lastname?.toLowerCase().includes(search) ||
+      c.firstname?.toLowerCase().includes(search) ||
+      c.lastnameKana?.toLowerCase().includes(search) ||
+      c.firstnameKana?.toLowerCase().includes(search) ||
+      c.reading?.toLowerCase().includes(search) ||
+      c.work?.toLowerCase().includes(search);
+    const matchPlatform = charFilterPlatforms.length === 0 || charFilterPlatforms.every(fp => (c.platforms||[]).includes(fp));
+    return matchSearch && matchPlatform;
+  });
+
+  // フィルター
+  const allPlatforms = [...new Set(characters.flatMap(c=>c.platforms||[]))].sort();
+  const filterEl = document.getElementById('char-tag-filter');
+  if (allPlatforms.length > 0) {
+    filterEl.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px;">
+      <span class="tag-chip ${charFilterPlatforms.length===0?'active':''}" onclick="charFilterPlatforms=[];renderCharacters()">すべて</span>
+      ${allPlatforms.map(p => `<span class="tag-chip ${charFilterPlatforms.includes(p)?'active':''}" onclick="toggleCharPF('${p.replace(/'/g,"\\'")}')">${esc(p)}</span>`).join('')}
+    </div>`;
+  } else { filterEl.innerHTML = ''; }
+
+  // 件数
+  const statEl = document.getElementById('char-stat');
+  if (characters.length > 0) {
+    statEl.style.display = 'flex';
+    statEl.innerHTML = `
+      <div class="stat-item"><div class="stat-num">${characters.length}</div><div class="stat-label">総数</div></div>
+      <div class="stat-item"><div class="stat-num">${[...new Set(characters.map(c=>c.work).filter(Boolean))].length}</div><div class="stat-label">作品数</div></div>
+    `;
+  } else { statEl.style.display = 'none'; }
+
+  const el = document.getElementById('char-list');
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon mi" style="font-size:48px">person_outline</div><p>キャラクターが見つかりません</p></div>`;
+    return;
+  }
+  const countLabel = list.length < characters.length ? `${list.length}件表示` : '';
+  el.innerHTML = (countLabel ? `<div style="text-align:right;font-size:11px;color:var(--text3);padding:2px 4px;">${countLabel}</div>` : '') + list.map(c => `
+    <div class="card" onclick="showDetail(${c.id})">
+      <div class="card-header">
+        <div class="card-name">${esc(c.name)}</div>
+        <div class="card-badges">
+          ${c.status ? `<span class="badge badge-${c.status==='公開'?'public':c.status==='非公開'?'private':'draft'}">${esc(c.status)}</span>` : ''}
+          ${c.length ? `<span class="badge badge-${c.length==='長編'?'long':'short'}">${esc(c.length)}</span>` : ''}
+        </div>
+      </div>
+      ${c.work ? `<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>` : ''}
+      ${(c.lastnameKana||c.firstnameKana) ? `<div class="card-reading">${esc((c.lastnameKana||''))} ${esc((c.firstnameKana||''))}</div>` : (c.reading ? `<div class="card-reading">${esc(c.reading)}</div>` : '')}
+      <div class="card-tags">
+        ${(c.platforms||[]).map(p => `<span class="tag" onclick="setCharFilter('platform','${p.replace(/'/g,"\\'")}'); event.stopPropagation()">#${esc(p)}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ==================== 詳細 ====================
+
+function toggleCharPF(p) {
+  const i = charFilterPlatforms.indexOf(p);
+  if (i >= 0) charFilterPlatforms.splice(i, 1);
+  else charFilterPlatforms.push(p);
+  renderCharacters();
+}
+
+let currentDetailId = null;
+
+function showDetail(id) {
+  const c = characters.find(x => x.id === id);
+  if (!c) return;
+  currentDetailId = id;
+  detailPrevPage = currentPage;
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-name">${esc(c.name)}</div>
+    ${(c.lastnameKana||c.firstnameKana) ? `<div class="detail-reading">${esc(c.lastnameKana||'')} ${esc(c.firstnameKana||'')}</div>` : (c.reading ? `<div class="detail-reading">${esc(c.reading)}</div>` : '')}
+    <div class="card-badges" style="margin-bottom:12px">
+      ${c.status ? `<span class="badge badge-${c.status==='公開'?'public':c.status==='非公開'?'private':'draft'}">${esc(c.status)}</span>` : ''}
+      ${c.length ? `<span class="badge badge-${c.length==='長編'?'long':'short'}">${esc(c.length)}</span>` : ''}
+    </div>
+    ${c.work ? `<div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}</span></div>` : ''}
+    ${(c.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">投稿先</span><div class="detail-val detail-tags">${(c.platforms).map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
+    ${c.memo ? `<div class="detail-divider"></div><div style="font-size:14px; color:var(--text); line-height:1.7; white-space:pre-wrap">${esc(c.memo)}</div>` : ''}
+  `;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+}
+
+function closeDetail() {
+  showPage(detailPrevPage || 'page-character');
+}
+
+function editCurrentChar() {
+  const c = characters.find(x => x.id === currentDetailId);
+  if (c) openEditCharModal(c);
+}
+
+function deleteCurrentChar() {
+  const c = characters.find(x => x.id === currentDetailId);
+  if (!c) return;
+  showConfirm(
+    '削除の確認',
+    `「${c.name}」を削除しますか？\n\nこの操作は取り消せません。`,
+    () => {
+      characters = characters.filter(x => x.id !== currentDetailId);
+      saveData('chars', characters);
+      closeDetail();
+    }
+  );
+}
+
+// ==================== キャラクターCRUD ====================
+let editingCharId = null;
+let currentPlatforms = [];
+
+function openAddCharModal() {
+  editingCharId = null;
+  currentPlatforms = [];
+  document.getElementById('char-modal-title').textContent = 'キャラクター追加';
+  document.getElementById('f-lastname').value = '';
+  document.getElementById('f-firstname').value = '';
+  document.getElementById('f-lastname-kana').value = '';
+  document.getElementById('f-firstname-kana').value = '';
+  document.getElementById('f-work').value = '';
+  document.getElementById('f-status').value = '';
+  document.getElementById('f-length').value = '';
+  document.getElementById('f-memo').value = '';
+  document.getElementById('char-delete-btn').style.display = 'none';
+  renderPlatformSelect([]);
+  document.getElementById('f-work-input').value = '';
+  document.getElementById('f-work').value = '';
+  document.getElementById('f-work-list').classList.remove('open');
+  document.getElementById('char-modal').classList.add('active');
+}
+
+function openEditCharModal(c) {
+  editingCharId = c.id;
+  currentPlatforms = [...(c.platforms||[])];
+  document.getElementById('char-modal-title').textContent = 'キャラクター編集';
+  document.getElementById('f-lastname').value = c.lastname||'';
+  document.getElementById('f-firstname').value = c.firstname||'';
+  document.getElementById('f-lastname-kana').value = c.lastnameKana||'';
+  document.getElementById('f-firstname-kana').value = c.firstnameKana||'';
+  document.getElementById('f-work').value = c.work||'';
+  document.getElementById('f-status').value = c.status||'';
+  document.getElementById('f-length').value = c.length||'';
+  document.getElementById('f-memo').value = c.memo||'';
+  document.getElementById('char-delete-btn').style.display = 'block';
+  renderPlatformSelect(currentPlatforms);
+  document.getElementById('f-work-input').value = c.work||'';
+  document.getElementById('f-work').value = c.work||'';
+  document.getElementById('f-work-list').classList.remove('open');
+  document.getElementById('char-modal').classList.add('active');
+}
+
+function saveChar() {
+  const lastname = document.getElementById('f-lastname').value.trim();
+  const firstname = document.getElementById('f-firstname').value.trim();
+  const name = [lastname, firstname].filter(Boolean).join(' ');
+  if (!name) { alert('名字または名前を入力してください'); return; }
+  const work = getWorkFromForm(null, 'f-work');
+  
+  // 新しい作品名なら追加
+  if (work) addWorkTitle(work);
+
+  const data = {
+    id: editingCharId || Date.now(),
+    name,
+    lastname,
+    firstname,
+    lastnameKana: document.getElementById('f-lastname-kana').value.trim(),
+    firstnameKana: document.getElementById('f-firstname-kana').value.trim(),
+    reading: [document.getElementById('f-lastname-kana').value.trim(), document.getElementById('f-firstname-kana').value.trim()].filter(Boolean).join(' '),
+    work,
+    status: document.getElementById('f-status').value,
+    length: document.getElementById('f-length').value,
+    platforms: [...currentPlatforms],
+    memo: document.getElementById('f-memo').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (editingCharId) {
+    const idx = characters.findIndex(c => c.id === editingCharId);
+    if (idx >= 0) characters[idx] = data;
+  } else {
+    characters.push(data);
+  }
+  saveData('chars', characters);
+  closeModal('char-modal');
+  renderCharacters();
+}
+
+function deleteCharFromModal() {
+  if (!editingCharId) return;
+  const c = characters.find(x => x.id === editingCharId);
+  showConfirm(
+    '削除の確認',
+    `「${c?.name}」を削除しますか？\n\nこの操作は取り消せません。`,
+    () => {
+      characters = characters.filter(x => x.id !== editingCharId);
+      saveData('chars', characters);
+      closeModal('char-modal');
+      renderCharacters();
+    }
+  );
+}
+
+// ==================== 作品タイトル管理 ====================
+function getWorkTitles() {
+  const fromChars = characters.map(c => c.work).filter(Boolean);
+  const fromContests = contests.map(c => c.work).filter(Boolean);
+  return [...new Set([...fromChars, ...fromContests])].sort();
+}
+
+function addWorkTitle(title) {
+  const custom = JSON.parse(localStorage.getItem('sosaku_works') || '[]');
+  if (!custom.includes(title)) {
+    custom.push(title);
+    localStorage.setItem('sosaku_works', JSON.stringify(custom));
+  }
+}
+
+function updateWorkDropdown() {} // no-op, kept for compat
+
+function showWorkList(prefix) {
+  filterWorkList(prefix);
+  document.getElementById(prefix + '-work-list').classList.add('open');
+}
+
+function filterWorkList(prefix) {
+  const input = document.getElementById(prefix + '-work-input');
+  const list = document.getElementById(prefix + '-work-list');
+  const q = input.value.toLowerCase();
+  const all = getWorkTitles();
+  const filtered = q ? all.filter(t => t.toLowerCase().includes(q)) : all;
+
+  let html = filtered.map(t =>
+    `<div class="select-item" onmousedown="pickWork('${prefix}','${t.replace(/'/g,"\\'")}')">${esc(t)}</div>`
+  ).join('');
+
+  // 入力値が既存にない場合は「追加」を表示
+  const trimmed = input.value.trim();
+  if (trimmed && !all.includes(trimmed)) {
+    html += `<div class="select-item add-new" onmousedown="pickWork('${prefix}','${trimmed.replace(/'/g,"\\'")}')">＋「${esc(trimmed)}」を新規追加</div>`;
+  }
+  if (!html) {
+    html = `<div class="select-item" style="color:var(--text3)">候補なし — そのまま入力で新規追加</div>`;
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+}
+
+function pickWork(prefix, val) {
+  document.getElementById(prefix + '-work-input').value = val;
+  document.getElementById(prefix.replace('-','')+'-work').value = val;
+  // hidden input にもセット
+  const hiddenId = prefix === 'f' ? 'f-work' : 'fc-work';
+  document.getElementById(hiddenId).value = val;
+  document.getElementById(prefix + '-work-list').classList.remove('open');
+}
+
+function getWorkFromForm(selectId, inputId) {
+  // inputId の hidden から取る。空なら入力欄の値を使う
+  const hidden = document.getElementById(inputId).value;
+  if (hidden) return hidden;
+  const prefix = inputId === 'f-work' ? 'f' : 'fc';
+  return document.getElementById(prefix + '-work-input').value.trim();
+}
+
+// リスト外クリックで閉じる
+document.addEventListener('click', e => {
+  ['f','fc'].forEach(prefix => {
+    const wrap = document.getElementById(prefix + '-work-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById(prefix + '-work-list').classList.remove('open');
+      const input = document.getElementById(prefix + '-work-input');
+      const hiddenId = prefix === 'f' ? 'f-work' : 'fc-work';
+      if (input.value.trim()) {
+        document.getElementById(hiddenId).value = input.value.trim();
+      }
+    }
+  });
+  // タグ候補も閉じる
+  ['fc-tag-wrap','fd-tag-wrap'].forEach(id => {
+    const wrap = document.getElementById(id);
+    if (wrap && !wrap.contains(e.target)) {
+      const listId = id === 'fc-tag-wrap' ? 'contest-tag-suggestions' : 'dict-tag-suggestions';
+      document.getElementById(listId).classList.remove('open');
+    }
+  });
+});
+
+// ==================== プラットフォーム ====================
+const DEFAULT_PLATFORMS = ['pixiv', 'エブリスタ', 'ノベマ！', 'カクヨム', '小説家になろう'];
+
+function renderPlatformSelect(selected) {
+  currentPlatforms = [...selected];
+  const container = document.getElementById('platform-select');
+  const allPlatforms = [...new Set([...DEFAULT_PLATFORMS, ...JSON.parse(localStorage.getItem('sosaku_platforms')||'[]')])];
+  container.innerHTML = allPlatforms.map(p =>
+    `<button class="platform-btn ${currentPlatforms.includes(p)?'selected':''}" onclick="togglePlatform(this)" data-platform="${esc(p)}">${esc(p)}</button>`
+  ).join('');
+}
+
+function togglePlatform(btn) {
+  const p = btn.dataset.platform || btn.textContent.trim();
+  if (currentPlatforms.includes(p)) {
+    currentPlatforms = currentPlatforms.filter(x => x !== p);
+    btn.classList.remove('selected');
+  } else {
+    currentPlatforms.push(p);
+    btn.classList.add('selected');
+  }
+}
+
+function addCustomPlatform() {
+  const val = document.getElementById('f-platform-custom').value.trim();
+  if (!val) return;
+  const saved = JSON.parse(localStorage.getItem('sosaku_platforms')||'[]');
+  if (!saved.includes(val)) {
+    saved.push(val);
+    localStorage.setItem('sosaku_platforms', JSON.stringify(saved));
+  }
+  document.getElementById('f-platform-custom').value = '';
+  renderPlatformSelect(currentPlatforms);
+  togglePlatformByName(val);
+}
+
+function togglePlatformByName(name) {
+  if (!currentPlatforms.includes(name)) {
+    currentPlatforms.push(name);
+    renderPlatformSelect(currentPlatforms);
+  }
+}
+
+// ==================== タグ入力 ====================
+function renderTagArea(areaId, tags, inputId) {
+  const area = document.getElementById(areaId);
+  const inputEl = document.getElementById(inputId);
+  area.innerHTML = '';
+  tags.forEach((t, i) => {
+    const span = document.createElement('span');
+    span.className = 'tag-item';
+    span.innerHTML = `${esc(t)} <span class="tag-remove mi" style="font-size:12px" onclick="removeTag('${areaId}','${inputId}',${i})">close</span>`;
+    area.appendChild(span);
+  });
+  area.appendChild(inputEl);
+}
+
+function removeTag(areaId, inputId, idx) {
+  if (areaId === 'contest-tag-area') { currentContestTags.splice(idx,1); renderTagArea(areaId, currentContestTags, inputId); }
+  else if (areaId === 'dict-tag-area') { currentDictTags.splice(idx,1); renderTagArea(areaId, currentDictTags, inputId); }
+}
+
+// ==================== コンテスト ====================
+let editingContestId = null;
+let currentContestTags = [];
+
+function renderContests() {
+  const search = document.getElementById('contest-search').value.toLowerCase();
+  let list = contests.filter(c => {
+    const matchSearch = !search ||
+      c.name?.toLowerCase().includes(search) ||
+      c.work?.toLowerCase().includes(search) ||
+      (c.platforms||[]).some(p => p.toLowerCase().includes(search)) ||
+      (c.tags||[]).some(t => t.toLowerCase().includes(search));
+    const matchStatus = !contestFilterStatus || c.status === contestFilterStatus;
+    const matchSite = !contestFilterSite || (c.platforms||[]).includes(contestFilterSite);
+    const matchTag = !contestFilterTag || (c.tags||[]).includes(contestFilterTag);
+    return matchSearch && matchStatus && matchSite && matchTag;
+  });
+
+  const allStatuses = [...new Set(contests.map(c=>c.status).filter(Boolean))];
+  const allSites = [...new Set(contests.flatMap(c=>c.platforms||[]))].sort();
+  const allTags = [...new Set(contests.flatMap(c=>c.tags||[]))].sort();
+  const filterEl = document.getElementById('contest-tag-filter');
+  filterEl.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;gap:6px;">
+        <select onchange="contestFilterStatus=this.value;renderContests()" style="padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none;flex:1;">
+          <option value="">結果：すべて</option>
+          ${allStatuses.map(s => `<option value="${esc(s)}" ${contestFilterStatus===s?'selected':''}>${esc(s)}</option>`).join('')}
+        </select>
+        <select onchange="contestFilterSite=this.value;renderContests()" style="padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none;flex:1;">
+          <option value="">サイト：すべて</option>
+          ${allSites.map(s => `<option value="${esc(s)}" ${contestFilterSite===s?'selected':''}>${esc(s)}</option>`).join('')}
+        </select>
+      </div>
+      ${allTags.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:4px;">
+        <span class="tag-chip ${!contestFilterTag?'active':''}" onclick="contestFilterTag='';renderContests()">すべて</span>
+        ${allTags.map(t => `<span class="tag-chip ${contestFilterTag===t?'active':''}" onclick="toggleContestFilterTag('${t.replace(/'/g,"\\'")}')">#${esc(t)}</span>`).join('')}
+      </div>` : ''}
+    </div>
+  `;
+
+  const el = document.getElementById('contest-list');
+
+  // 統計
+  const cStatEl = document.getElementById('contest-stat');
+  if (contests.length > 0) {
+    const passCount = contests.filter(c => ['一次','二次','最終'].includes(c.status)).length;
+    const winCount = contests.filter(c => c.status === '受賞').length;
+    cStatEl.style.display = 'flex';
+    cStatEl.innerHTML = `
+      <div class="stat-item"><div class="stat-num">${contests.length}</div><div class="stat-label">応募数</div></div>
+      <div class="stat-item"><div class="stat-num">${passCount}</div><div class="stat-label">通過</div></div>
+      <div class="stat-item"><div class="stat-num">${winCount}</div><div class="stat-label">受賞</div></div>
+    `;
+  } else { cStatEl.style.display = 'none'; }
+
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon mi" style="font-size:48px">emoji_events</div><p>コンテストがありません</p></div>`;
+    return;
+  }
+
+  const cCountLabel = list.length < contests.length ? `${list.length}件表示` : '';
+  const statusColors = { '応募予定':'#e3f2fd;color:#1976d2', '執筆中':'#fff3e0;color:#f57c00', '提出済み':'#e3f2fd;color:#5c6bc0', '一次':'#fff8e1;color:#f9a825', '二次':'#fff3e0;color:#ef6c00', '最終':'#f3e5f5;color:#7b1fa2', '受賞':'#e8f5e9;color:#388e3c', '落選':'#f5f5f5;color:#757575' };
+  el.innerHTML = (cCountLabel ? `<div style="text-align:right;font-size:11px;color:var(--text3);padding:2px 4px;">${cCountLabel}</div>` : '') + list.map(c => `
+    <div class="card" onclick="openEditContestModal(${c.id})">
+      <div class="card-header">
+        <div class="card-name">${esc(c.name)}</div>
+        ${c.status ? `<span class="badge" style="background:${statusColors[c.status]||'#eee;color:#666'}">${esc(c.status)}</span>` : ''}
+      </div>
+      ${c.work ? `<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>` : ''}
+      ${c.resultPeriod ? `<div class="contest-detail"><span class="mi" style="font-size:13px;margin-right:2px">schedule</span>${esc(c.resultPeriod)}</div>` : ''}
+      ${(c.platforms||[]).length > 0 ? `<div class="card-tags" style="margin-top:4px">${(c.platforms).map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div>` : ''}
+      ${c.url ? `<div style="margin-top:4px"><a href="${esc(c.url)}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="font-size:12px;color:var(--primary);word-break:break-all">${esc(c.url.length>45?c.url.slice(0,45)+'...':c.url)}</a></div>` : ''}
+      <div class="card-tags" style="margin-top:8px">
+        ${(c.tags||[]).map(t => `<span class="tag" onclick="toggleContestFilterTag('${t.replace(/'/g,"\\'")}'); event.stopPropagation()">#${esc(t)}</span>`).join('')}
+      </div>
+      ${c.memo ? `<div style="font-size:12px; color:var(--text3); margin-top:6px">${esc(c.memo).substring(0,50)}${c.memo.length>50?'…':''}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+let currentContestPlatforms = [];
+
+function toggleContestFilterTag(t) {
+  contestFilterTag = (contestFilterTag === t) ? '' : t;
+  renderContests();
+}
+
+function renderContestPlatformSelect(selected) {
+  currentContestPlatforms = [...selected];
+  const container = document.getElementById('contest-platform-select');
+  const allPlatforms = [...new Set([...DEFAULT_PLATFORMS, ...JSON.parse(localStorage.getItem('sosaku_platforms')||'[]')])];
+  container.innerHTML = allPlatforms.map(p =>
+    `<button class="platform-btn ${currentContestPlatforms.includes(p)?'selected':''}" onclick="toggleContestPlatform(this)" data-platform="${esc(p)}">${esc(p)}</button>`
+  ).join('');
+}
+
+function toggleContestPlatform(btn) {
+  const p = btn.dataset.platform || btn.textContent.trim();
+  if (currentContestPlatforms.includes(p)) {
+    currentContestPlatforms = currentContestPlatforms.filter(x => x !== p);
+    btn.classList.remove('selected');
+  } else {
+    currentContestPlatforms.push(p);
+    btn.classList.add('selected');
+  }
+}
+
+function addContestCustomPlatform() {
+  const val = document.getElementById('fc-platform-custom').value.trim();
+  if (!val) return;
+  const saved = JSON.parse(localStorage.getItem('sosaku_platforms')||'[]');
+  if (!saved.includes(val)) { saved.push(val); localStorage.setItem('sosaku_platforms', JSON.stringify(saved)); }
+  document.getElementById('fc-platform-custom').value = '';
+  if (!currentContestPlatforms.includes(val)) currentContestPlatforms.push(val);
+  renderContestPlatformSelect(currentContestPlatforms);
+}
+
+function openAddContestModal() {
+  editingContestId = null;
+  currentContestTags = [];
+  currentContestPlatforms = [];
+  document.getElementById('contest-modal-title').textContent = 'コンテスト追加';
+  document.getElementById('fc-name').value = '';
+  document.getElementById('fc-work').value = '';
+  document.getElementById('fc-url').value = '';
+  document.getElementById('fc-result-period').value = '';
+  document.getElementById('fc-status').value = '';
+  document.getElementById('fc-memo').value = '';
+  document.getElementById('contest-delete-btn').style.display = 'none';
+  renderTagArea('contest-tag-area', currentContestTags, 'fc-tag-input');
+  renderContestPlatformSelect([]);
+  document.getElementById('fc-work-input').value = '';
+  document.getElementById('fc-work').value = '';
+  document.getElementById('fc-work-list').classList.remove('open');
+  document.getElementById('contest-modal').classList.add('active');
+}
+
+function openEditContestModal(id) {
+  const c = contests.find(x => x.id === id);
+  if (!c) return;
+  editingContestId = id;
+  currentContestTags = [...(c.tags||[])];
+  currentContestPlatforms = [...(c.platforms||[])];
+  document.getElementById('contest-modal-title').textContent = 'コンテスト編集';
+  document.getElementById('fc-name').value = c.name||'';
+  document.getElementById('fc-work').value = c.work||'';
+  document.getElementById('fc-url').value = c.url||'';
+  document.getElementById('fc-result-period').value = c.resultPeriod||'';
+  document.getElementById('fc-status').value = c.status||'';
+  document.getElementById('fc-memo').value = c.memo||'';
+  document.getElementById('contest-delete-btn').style.display = 'block';
+  renderTagArea('contest-tag-area', currentContestTags, 'fc-tag-input');
+  renderContestPlatformSelect(c.platforms||[]);
+  document.getElementById('fc-work-input').value = c.work||'';
+  document.getElementById('fc-work').value = c.work||'';
+  document.getElementById('fc-work-list').classList.remove('open');
+  document.getElementById('contest-modal').classList.add('active');
+}
+
+function saveContest() {
+  const name = document.getElementById('fc-name').value.trim();
+  if (!name) { alert('コンテスト名を入力してください'); return; }
+  const work = getWorkFromForm(null, 'fc-work');
+  if (work) addWorkTitle(work);
+
+  const data = {
+    id: editingContestId || Date.now(),
+    name,
+    work,
+    url: document.getElementById('fc-url').value.trim(),
+    resultPeriod: document.getElementById('fc-result-period').value.trim(),
+    status: document.getElementById('fc-status').value,
+    platforms: [...currentContestPlatforms],
+    tags: [...currentContestTags],
+    memo: document.getElementById('fc-memo').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (editingContestId) {
+    const idx = contests.findIndex(c => c.id === editingContestId);
+    if (idx >= 0) contests[idx] = data;
+  } else {
+    contests.push(data);
+  }
+  saveData('contests', contests);
+  closeModal('contest-modal');
+  renderContests();
+}
+
+function handleContestTagInput(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addContestTagByBtn();
+  }
+}
+
+function addContestTagByBtn() {
+  const input = document.getElementById('fc-tag-input');
+  const val = input.value.trim().replace(/,/g,'');
+  if (val && !currentContestTags.includes(val)) {
+    currentContestTags.push(val);
+    renderTagArea('contest-tag-area', currentContestTags, 'fc-tag-input');
+  }
+  input.value = '';
+  document.getElementById('contest-tag-suggestions').classList.remove('open');
+}
+
+function deleteContestFromModal() {
+  if (!editingContestId) return;
+  const c = contests.find(x => x.id === editingContestId);
+  showConfirm('削除の確認', `「${c?.name}」を削除しますか？\n\nこの操作は取り消せません。`, () => {
+    contests = contests.filter(x => x.id !== editingContestId);
+    saveData('contests', contests);
+    closeModal('contest-modal');
+    renderContests();
+  });
+}
+
+// ==================== 辞書 ====================
+let editingDictId = null;
+let currentDictTags = [];
+
+function renderDict() {
+  const search = document.getElementById('dict-search').value.toLowerCase();
+  let list = dictItems.filter(d => {
+    const matchSearch = !search ||
+      d.word?.toLowerCase().includes(search) ||
+      d.desc?.toLowerCase().includes(search) ||
+      (d.tags||[]).some(t => t.toLowerCase().includes(search));
+    const matchTag = dictActiveTag.length === 0 || dictActiveTag.every(ft => (d.tags||[]).includes(ft));
+    return matchSearch && matchTag;
+  });
+
+  const allTags = [...new Set(dictItems.flatMap(d => d.tags||[]))];
+  const filterEl = document.getElementById('dict-tag-filter');
+  let html = `<span class="tag-chip ${dictActiveTag.length===0?'active':''}" onclick="dictActiveTag=[];renderDict()">すべて</span>`;
+  allTags.forEach(t => {
+    html += `<span class="tag-chip ${dictActiveTag.includes(t)?'active':''}" onclick="toggleDictFilterTag('${t.replace(/'/g,"\\'")}')">&#35; ${t}</span>`;
+  });
+  filterEl.innerHTML = html;
+
+  const el = document.getElementById('dict-list');
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon mi" style="font-size:48px">menu_book</div><p>表現がありません</p></div>`;
+    return;
+  }
+  const dCountLabel = list.length < dictItems.length ? `${list.length}件表示` : '';
+  el.innerHTML = (dCountLabel ? `<div style="text-align:right;font-size:11px;color:var(--text3);padding:2px 4px;">${dCountLabel}</div>` : '') + list.map(d => `
+    <div class="card" onclick="openEditDictModal(${d.id})">
+      <div class="card-name">${esc(d.word)}</div>
+      ${d.desc ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;line-height:1.5">${esc(d.desc)}</div>` : ''}
+      <div class="card-tags" style="margin-top:8px">
+        ${(d.tags||[]).map(t => `<span class="tag" onclick="toggleDictFilterTag('${t.replace(/'/g,"\\'")}'); event.stopPropagation()">#${esc(t)}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleDictFilterTag(t) {
+  const i = dictActiveTag.indexOf(t);
+  if (i >= 0) dictActiveTag.splice(i, 1);
+  else dictActiveTag.push(t);
+  renderDict();
+}
+
+function openAddDictModal() {
+  editingDictId = null;
+  currentDictTags = [];
+  document.getElementById('dict-modal-title').textContent = '用語追加';
+  document.getElementById('fd-word').value = '';
+  document.getElementById('fd-desc').value = '';
+  document.getElementById('dict-delete-btn').style.display = 'none';
+  renderTagArea('dict-tag-area', currentDictTags, 'fd-tag-input');
+  document.getElementById('dict-modal').classList.add('active');
+}
+
+function openEditDictModal(id) {
+  const d = dictItems.find(x => x.id === id);
+  if (!d) return;
+  editingDictId = id;
+  currentDictTags = [...(d.tags||[])];
+  document.getElementById('dict-modal-title').textContent = '用語編集';
+  document.getElementById('fd-word').value = d.word||'';
+  document.getElementById('fd-desc').value = d.desc||'';
+  document.getElementById('dict-delete-btn').style.display = 'block';
+  renderTagArea('dict-tag-area', currentDictTags, 'fd-tag-input');
+  document.getElementById('dict-modal').classList.add('active');
+}
+
+function saveDict() {
+  const word = document.getElementById('fd-word').value.trim();
+  if (!word) { alert('用語を入力してください'); return; }
+  const data = {
+    id: editingDictId || Date.now(),
+    word,
+    desc: document.getElementById('fd-desc').value.trim(),
+    tags: [...currentDictTags],
+    updatedAt: new Date().toISOString()
+  };
+  if (editingDictId) {
+    const idx = dictItems.findIndex(d => d.id === editingDictId);
+    if (idx >= 0) dictItems[idx] = data;
+  } else {
+    dictItems.push(data);
+  }
+  saveData('dict', dictItems);
+  closeModal('dict-modal');
+  renderDict();
+}
+
+function handleDictTagInput(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addDictTagByBtn();
+  }
+}
+
+function addDictTagByBtn() {
+  const input = document.getElementById('fd-tag-input');
+  const val = input.value.trim().replace(/,/g,'');
+  if (val && !currentDictTags.includes(val)) {
+    currentDictTags.push(val);
+    renderTagArea('dict-tag-area', currentDictTags, 'fd-tag-input');
+  }
+  input.value = '';
+  document.getElementById('dict-tag-suggestions').classList.remove('open');
+}
+
+// ==================== タグ候補 ====================
+function getAllContestTags() {
+  return [...new Set(contests.flatMap(c => c.tags || []))].sort();
+}
+function getAllDictTags() {
+  return [...new Set(dictItems.flatMap(d => d.tags || []))].sort();
+}
+
+function filterTagSuggestions(type) {
+  const inputId = type === 'contest' ? 'fc-tag-input' : 'fd-tag-input';
+  const listId = type === 'contest' ? 'contest-tag-suggestions' : 'dict-tag-suggestions';
+  const currentArr = type === 'contest' ? currentContestTags : currentDictTags;
+  const allTags = type === 'contest' ? getAllContestTags() : getAllDictTags();
+
+  const q = document.getElementById(inputId).value.toLowerCase().trim();
+  const filtered = allTags.filter(t => !currentArr.includes(t) && (!q || t.toLowerCase().includes(q)));
+  const listEl = document.getElementById(listId);
+
+  if (filtered.length === 0) {
+    listEl.classList.remove('open');
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(t =>
+    `<div class="select-item" onmousedown="pickTagSuggestion('${type}','${t.replace(/'/g,"\\'")}')">${esc(t)}</div>`
+  ).join('');
+  listEl.classList.add('open');
+}
+
+function pickTagSuggestion(type, val) {
+  if (type === 'contest') {
+    if (!currentContestTags.includes(val)) {
+      currentContestTags.push(val);
+      renderTagArea('contest-tag-area', currentContestTags, 'fc-tag-input');
+    }
+    document.getElementById('fc-tag-input').value = '';
+    document.getElementById('contest-tag-suggestions').classList.remove('open');
+  } else {
+    if (!currentDictTags.includes(val)) {
+      currentDictTags.push(val);
+      renderTagArea('dict-tag-area', currentDictTags, 'fd-tag-input');
+    }
+    document.getElementById('fd-tag-input').value = '';
+    document.getElementById('dict-tag-suggestions').classList.remove('open');
+  }
+}
+
+function deleteDictFromModal() {
+  if (!editingDictId) return;
+  const d = dictItems.find(x => x.id === editingDictId);
+  showConfirm('削除の確認', `「${d?.word}」を削除しますか？\n\nこの操作は取り消せません。`, () => {
+    dictItems = dictItems.filter(x => x.id !== editingDictId);
+    saveData('dict', dictItems);
+    closeModal('dict-modal');
+    renderDict();
+  });
+}
+
+// ==================== バックアップ ====================
+function updateBackupStats() {
+  document.getElementById('backup-stats').innerHTML = `
+    キャラクター: <b>${characters.length}</b> 件<br>
+    コンテスト: <b>${contests.length}</b> 件<br>
+    辞書: <b>${dictItems.length}</b> 件
+  `;
+}
+
+function exportData(format='json') {
+  const data = {
+    version: 2,
+    exportDate: new Date().toISOString(),
+    characters,
+    contests,
+    dict: dictItems,
+    works: JSON.parse(localStorage.getItem('sosaku_works')||'[]'),
+    platforms: JSON.parse(localStorage.getItem('sosaku_platforms')||'[]')
+  };
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  if (format === 'txt') {
+    let txt = `創作管理バックアップ ${dateStr}\n`;
+    txt += '='.repeat(40) + '\n\n';
+
+    // 登場人物を作品名ごとにグループ化
+    txt += `【登場人物: ${characters.length}件】\n`;
+    txt += '-'.repeat(30) + '\n\n';
+    const workGroups = {};
+    const noWork = [];
+    characters.forEach(c => {
+      if (c.work) {
+        if (!workGroups[c.work]) workGroups[c.work] = [];
+        workGroups[c.work].push(c);
+      } else { noWork.push(c); }
+    });
+    Object.keys(workGroups).sort().forEach(work => {
+      txt += `■ ${work}\n`;
+      workGroups[work].forEach(c => {
+        const nameStr = [c.lastname, c.firstname].filter(Boolean).join(' ') || c.name;
+        const kanaStr = [c.lastnameKana, c.firstnameKana].filter(Boolean).join(' ');
+        txt += `  ${nameStr}`;
+        if (kanaStr) txt += `（${kanaStr}）`;
+        const info = [];
+        if (c.status) info.push(c.status);
+        if (c.length) info.push(c.length);
+        if (info.length) txt += `／${info.join('・')}`;
+        txt += '\n';
+        if (c.platforms?.length) txt += `    投稿先: ${c.platforms.join(', ')}\n`;
+        if (c.memo) txt += `    ※${c.memo}\n`;
+      });
+      txt += '\n';
+    });
+    if (noWork.length) {
+      txt += `■ 作品名未設定\n`;
+      noWork.forEach(c => {
+        const nameStr = [c.lastname, c.firstname].filter(Boolean).join(' ') || c.name;
+        txt += `  ${nameStr}\n`;
+      });
+      txt += '\n';
+    }
+
+    txt += `\n【コンテスト: ${contests.length}件】\n`;
+    txt += '-'.repeat(30) + '\n\n';
+    contests.forEach(c => {
+      txt += `■ ${c.name}\n`;
+      if (c.work) txt += `  応募作品: ${c.work}\n`;
+      if (c.status) txt += `  結果: ${c.status}\n`;
+      if (c.platforms?.length) txt += `  掲載サイト: ${c.platforms.join(', ')}\n`;
+      if (c.resultPeriod) txt += `  結果発表時期: ${c.resultPeriod}\n`;
+      if (c.url) txt += `  URL: ${c.url}\n`;
+      if (c.tags?.length) txt += `  執筆時期: ${c.tags.join(', ')}\n`;
+      if (c.memo) txt += `  メモ: ${c.memo}\n`;
+      txt += '\n';
+    });
+
+    txt += `\n【辞書: ${dictItems.length}件】\n`;
+    txt += '-'.repeat(30) + '\n\n';
+    dictItems.forEach(d => {
+      txt += `■ ${d.word}\n`;
+      if (d.desc) txt += `  ${d.desc}\n`;
+      if (d.tags?.length) txt += `  タグ: ${d.tags.join(', ')}\n`;
+      txt += '\n';
+    });
+
+    txt += '\n---\n';
+    txt += 'このファイルはテキスト形式のメモです。\n';
+    txt += 'アプリへのインポートにはJSONファイルをご使用ください。\n';
+    const blob = new Blob(['\uFEFF' + txt], {type: 'text/plain; charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `創作管理バックアップ_${dateStr}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } else {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `創作管理バックアップ_${dateStr}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      showConfirm('インポートの確認', `バックアップをインポートしますか？\n\n現在のデータは上書きされます。`, () => {
+        if (data.characters) { characters = data.characters; saveData('chars', characters); }
+        if (data.contests) { contests = data.contests; saveData('contests', contests); }
+        if (data.dict) { dictItems = data.dict; saveData('dict', dictItems); }
+        if (data.works) localStorage.setItem('sosaku_works', JSON.stringify(data.works));
+        if (data.platforms) localStorage.setItem('sosaku_platforms', JSON.stringify(data.platforms));
+        alert('インポートが完了しました！');
+        renderCharacters(); renderContests(); renderDict();
+        updateBackupStats();
+      }, 'インポートする', '#388e3c');
+    } catch(err) {
+      alert('ファイルの読み込みに失敗しました。正しいJSONファイルか確認してください。');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+
+// ==================== CSV一括インポート ====================
+function openCsvImport() {
+  document.getElementById('csv-input').value = '';
+  document.getElementById('csv-modal').classList.add('active');
+}
+
+function executeCsvImport() {
+  const raw = document.getElementById('csv-input').value.trim();
+  if (!raw) { alert('テキストを貼り付けてください'); return; }
+  const lines = raw.split('\n').filter(l => l.trim());
+  // ヘッダー行の判定（最初の行に数字が少なければヘッダーとみなす）
+  let startIdx = 0;
+  const firstCols = lines[0].split(/\t|,/);
+  if (firstCols[0].match(/[名前名字氏名name]/i) || (firstCols.length > 1 && !firstCols[0].trim())) {
+    startIdx = 1;
+  }
+  let added = 0;
+  const works = new Set();
+  for (let i = startIdx; i < lines.length; i++) {
+    const cols = lines[i].split(/\t|,/).map(c => c.trim().replace(/^["']|["']$/g,''));
+    const lastname = cols[0];
+    const firstname = cols[1] || '';
+    const name = [lastname, firstname].filter(Boolean).join(' ');
+    if (!name) continue;
+    const lastnameKana = cols[2] || '';
+    const firstnameKana = cols[3] || '';
+    const c = {
+      id: Date.now() + i,
+      name,
+      lastname,
+      firstname,
+      lastnameKana,
+      firstnameKana,
+      reading: [lastnameKana, firstnameKana].filter(Boolean).join(' '),
+      work: cols[4] || '',
+      status: cols[5] || '',
+      length: cols[6] || '',
+      platforms: [],
+      tags: [],
+      memo: '',
+      updatedAt: new Date().toISOString()
+    };
+    if (c.work) works.add(c.work);
+    characters.push(c);
+    added++;
+  }
+  saveData('chars', characters);
+  // 作品名を登録
+  const savedWorks = JSON.parse(localStorage.getItem('sosaku_works')||'[]');
+  works.forEach(w => { if (!savedWorks.includes(w)) savedWorks.push(w); });
+  localStorage.setItem('sosaku_works', JSON.stringify(savedWorks));
+
+  closeModal('csv-modal');
+  alert(`${added}件のキャラクターをインポートしました！`);
+  renderCharacters();
+}
+
+// ==================== 確認ダイアログ ====================
+let confirmCallback = null;
+
+function showConfirm(title, msg, callback, okLabel='削除する', okColor='#f44336') {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-ok-btn').textContent = okLabel;
+  document.getElementById('confirm-ok-btn').style.background = okColor;
+  confirmCallback = callback;
+  document.getElementById('confirm-dialog').classList.add('active');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-dialog').classList.remove('active');
+  confirmCallback = null;
+}
+
+function execConfirm() {
+  const cb = confirmCallback;
+  closeConfirm();
+  if (cb) cb();
+}
+
+// ==================== モーダル管理 ====================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// ==================== ユーティリティ ====================
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// オーバーレイクリックで閉じる
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) el.classList.remove('active');
+  });
+});
+
+// データなし。空の状態でスタート。
+
+// 初期レンダリング
+renderCharacters();
+renderContests();
+renderDict();
+initFromClaudeStorage();
+
+// ==================== PWA: Service Worker登録 ====================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>

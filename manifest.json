@@ -1,0 +1,26 @@
+{
+  "name": "創作管理",
+  "short_name": "創作管理",
+  "description": "登場人物・コンテスト・辞書を管理する創作支援アプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fef8f7",
+  "theme_color": "#e87b6b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "ja"
+}
