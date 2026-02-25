@@ -713,6 +713,7 @@
     <div class="header-top">
       <h1>創作管理</h1>
       <div class="header-actions">
+        <span id="last-updated-badge" style="font-size:10px; color:var(--text3); padding:4px 8px; background:var(--surface2); border-radius:8px; white-space:nowrap; line-height:1.3; display:flex; align-items:center; gap:3px;"><span class="mi" style="font-size:12px">schedule</span><span id="last-updated-text">---</span></span>
         <button class="btn-icon" onclick="openBackupPage()" title="バックアップ"><span class="mi">backup</span></button>
       </div>
     </div>
@@ -790,16 +791,16 @@
     </label>
     <button class="backup-btn backup-import" style="margin-top:8px" onclick="openCsvImport()"><span class="mi" style="font-size:18px;margin-right:6px">table_rows</span>登場人物リストを一括インポート（CSV貼り付け）</button>
     <div class="pwa-section">
-      <div class="pwa-title"><span class="mi" style="font-size:16px;margin-right:4px">smartphone</span>ホーム画面に追加する方法</div>
-      <div class="pwa-step" style="margin-top:6px">【Android / Chrome の場合】</div>
-      <div class="pwa-step">① Chromeでこのページを開く</div>
-      <div class="pwa-step">② 右上のメニュー（⋮）をタップ</div>
-      <div class="pwa-step">③「ホーム画面に追加」または「アプリをインストール」を選択</div>
+      <div class="pwa-title"><span class="mi" style="font-size:16px;margin-right:4px">smartphone</span>アクセス方法</div>
+      <div class="pwa-step">このファイルはブラウザのブックマークに登録すると</div>
+      <div class="pwa-step">次回からすぐにアクセスできます。</div>
+      <div class="pwa-step" style="margin-top:10px">【Android / Chrome の場合】</div>
+      <div class="pwa-step">① 右上のメニュー（⋮）をタップ</div>
+      <div class="pwa-step">②「ブックマークに追加」を選択</div>
       <div class="pwa-step" style="margin-top:10px">【iPhone / Safari の場合】</div>
-      <div class="pwa-step">① Safariでこのページを開く</div>
-      <div class="pwa-step">② 下部の共有ボタン（四角に矢印）をタップ</div>
-      <div class="pwa-step">③「ホーム画面に追加」を選択</div>
-      <div class="pwa-step" style="margin-top:10px;color:var(--primary);font-size:12px;font-weight:600">アプリのように全画面で起動します！</div>
+      <div class="pwa-step">① 下部の共有ボタン（四角に矢印）をタップ</div>
+      <div class="pwa-step">②「ブックマークを追加」を選択</div>
+      <div class="pwa-step" style="margin-top:10px;color:var(--text3);font-size:12px">※ しばらく経つとソースが表示される場合は<br>　ファイルを再度開き直してください</div>
     </div>
     <div class="pwa-section" style="margin-top:12px">
       <div class="pwa-title"><span class="mi" style="font-size:16px;margin-right:4px">sync</span>PC⇔スマホでデータを共有</div>
@@ -1063,6 +1064,29 @@ function loadData(key) {
 function saveData(key, data) {
   try { localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {}
   if (useCS) { try { window.storage.set(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {} }
+  updateLastModified();
+}
+
+function updateLastModified() {
+  const now = new Date().toISOString();
+  try { localStorage.setItem('sosaku_last_modified', now); } catch(e) {}
+  if (useCS) { try { window.storage.set('sosaku_last_modified', now); } catch(e) {} }
+  displayLastModified();
+}
+
+function displayLastModified() {
+  const raw = localStorage.getItem('sosaku_last_modified');
+  const el = document.getElementById('last-updated-text');
+  const el2 = document.getElementById('backup-last-updated');
+  if (!raw) {
+    if (el) el.textContent = '---';
+    if (el2) el2.textContent = '---';
+    return;
+  }
+  const d = new Date(raw);
+  const str = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  if (el) el.textContent = str;
+  if (el2) el2.textContent = str;
 }
 
 async function initFromClaudeStorage() {
@@ -1864,10 +1888,12 @@ function deleteDictFromModal() {
 // ==================== バックアップ ====================
 function updateBackupStats() {
   document.getElementById('backup-stats').innerHTML = `
+    最終更新: <b id="backup-last-updated">---</b><br>
     キャラクター: <b>${characters.length}</b> 件<br>
     コンテスト: <b>${contests.length}</b> 件<br>
     辞書: <b>${dictItems.length}</b> 件
   `;
+  displayLastModified();
 }
 
 function exportData(format='json') {
@@ -2097,6 +2123,7 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 renderCharacters();
 renderContests();
 renderDict();
+displayLastModified();
 initFromClaudeStorage();
 
 // ==================== PWA: Service Worker登録 ====================
