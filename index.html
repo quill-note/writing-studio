@@ -1385,6 +1385,8 @@ function showWorkDetail(id) {
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-work-detail').classList.add('active');
+  document.getElementById('page-work-detail').scrollTop = 0;
+  window.scrollTo(0, 0);
 
   document.getElementById('work-detail-content').innerHTML = `
     <div class="detail-name">${esc(w.name)}</div>
@@ -1682,6 +1684,8 @@ function showDetail(id) {
   `;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-detail').classList.add('active');
+  document.getElementById('page-detail').scrollTop = 0;
+  window.scrollTo(0, 0);
 }
 
 function closeDetail() {
