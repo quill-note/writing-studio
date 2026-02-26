@@ -1364,10 +1364,10 @@ function renderWorks() {
     return `<div class="card" onclick="showWorkDetail(${w.id})">
       <div class="card-header">
         <div class="card-name">${esc(w.name)}</div>
-        <div class="card-badges" style="flex-wrap:wrap;gap:4px 4px;">
+        <div class="card-badges">
           ${w.publish ? `<span class="badge badge-${w.publish==='公開'?'publish':'private'}">${esc(w.publish)}</span>` : ''}
           ${w.length ? `<span class="badge badge-${w.length==='長編'?'long':'short'}">${esc(w.length)}</span>` : ''}
-          ${w.status ? `<div style="width:100%"></div><span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
+          ${w.status ? `<span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
         </div>
       </div>
       ${genreTags.length ? `<div class="card-tags" style="margin-bottom:4px">${genreTags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
@@ -1390,10 +1390,10 @@ function showWorkDetail(id) {
   document.getElementById('work-detail-content').innerHTML = `
     <div class="detail-name">${esc(w.name)}</div>
     ${(w.genres||[]).length ? `<div class="detail-tags" style="margin-bottom:12px">${w.genres.map(g => `<span class="tag">#${esc(g)}</span>`).join('')}</div>` : ''}
-    <div class="card-badges" style="margin-bottom:12px;flex-wrap:wrap;gap:4px 4px;">
+    <div class="card-badges" style="margin-bottom:12px">
       ${w.publish ? `<span class="badge badge-${w.publish==='公開'?'publish':'private'}">${esc(w.publish)}</span>` : ''}
       ${w.length ? `<span class="badge badge-${w.length==='長編'?'long':'short'}">${esc(w.length)}</span>` : ''}
-      ${w.status ? `<div style="width:100%"></div><span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
+      ${w.status ? `<span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
     </div>
     ${(w.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${w.platforms.map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
     ${(w.synopsis || w.worldview || w.memo) ? `<div class="detail-divider"></div>` : ''}
@@ -1637,10 +1637,10 @@ function renderCharacters() {
     return `<div class="card" onclick="showDetail(${c.id})">
       <div class="card-header">
         <div class="card-name">${esc(c.name)}</div>
-        <div class="card-badges" style="flex-wrap:wrap;gap:4px 4px;">
+        <div class="card-badges">
           ${work?.publish ? `<span class="badge badge-${work.publish==='公開'?'publish':'private'}">${esc(work.publish)}</span>` : ''}
           ${work?.length ? `<span class="badge badge-${work.length==='長編'?'long':'short'}">${esc(work.length)}</span>` : ''}
-          ${work?.status ? `<div style="width:100%"></div><span class="badge badge-${work.status==='完結'?'completed':work.status==='執筆中'?'writing':'planning'}">${esc(work.status)}</span>` : ''}
+          ${work?.status ? `<span class="badge badge-${work.status==='完結'?'completed':work.status==='執筆中'?'writing':'planning'}">${esc(work.status)}</span>` : ''}
         </div>
       </div>
       ${c.work ? `<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>` : ''}
@@ -1670,10 +1670,10 @@ function showDetail(id) {
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-name">${esc(c.name)}</div>
     ${(c.lastnameKana||c.firstnameKana) ? `<div class="detail-reading">${esc(c.lastnameKana||'')} ${esc(c.firstnameKana||'')}</div>` : (c.reading ? `<div class="detail-reading">${esc(c.reading)}</div>` : '')}
-    <div class="card-badges" style="margin-bottom:12px;flex-wrap:wrap;gap:4px 4px;">
+    <div class="card-badges" style="margin-bottom:12px">
       ${work?.publish ? `<span class="badge badge-${work.publish==='公開'?'publish':'private'}">${esc(work.publish)}</span>` : ''}
       ${work?.length ? `<span class="badge badge-${work.length==='長編'?'long':'short'}">${esc(work.length)}</span>` : ''}
-      ${work?.status ? `<div style="width:100%"></div><span class="badge badge-${work.status==='完結'?'completed':work.status==='執筆中'?'writing':'planning'}">${esc(work.status)}</span>` : ''}
+      ${work?.status ? `<span class="badge badge-${work.status==='完結'?'completed':work.status==='執筆中'?'writing':'planning'}">${esc(work.status)}</span>` : ''}
     </div>
     ${(work?.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${work.platforms.map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
     ${c.work ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}</span></div>` : ''}
