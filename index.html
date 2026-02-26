@@ -1292,19 +1292,32 @@ let worksData = loadData('works_data');
 let currentPage = 'page-works';
 let detailPrevPage = 'page-works';
 
-function showPage(pageId) {
+function showPage(pageId, pushHistory = true) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const navMap = { 'page-works': 'nav-works', 'page-character': 'nav-character', 'page-contest': 'nav-contest', 'page-dict': 'nav-dict' };
   if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
   currentPage = pageId;
+  if (pushHistory) history.pushState({ page: pageId }, '', '');
   if (pageId === 'page-backup') updateBackupStats();
   if (pageId === 'page-works') renderWorks();
   if (pageId === 'page-character') renderCharacters();
   if (pageId === 'page-contest') renderContests();
   if (pageId === 'page-dict') renderDict();
+  window.scrollTo(0, 0);
 }
+
+window.addEventListener('popstate', (e) => {
+  if (e.state?.page) {
+    showPage(e.state.page, false);
+  } else if (e.state?.detail) {
+    if (e.state.detail === 'work' && e.state.id) showWorkDetail(e.state.id, false);
+    else if (e.state.detail === 'char' && e.state.id) showDetail(e.state.id, false);
+  } else {
+    showPage('page-works', false);
+  }
+});
 
 function openBackupPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1377,7 +1390,7 @@ function renderWorks() {
   }).join('');
 }
 
-function showWorkDetail(id) {
+function showWorkDetail(id, pushHistory = true) {
   viewingWorkId = id;
   const w = worksData.find(x => x.id === id);
   if (!w) return;
@@ -1387,6 +1400,7 @@ function showWorkDetail(id) {
   document.getElementById('page-work-detail').classList.add('active');
   document.getElementById('page-work-detail').scrollTop = 0;
   window.scrollTo(0, 0);
+  if (pushHistory) history.pushState({ detail: 'work', id }, '', '');
 
   document.getElementById('work-detail-content').innerHTML = `
     <div class="detail-name">${esc(w.name)}</div>
@@ -1575,6 +1589,7 @@ function saveWork() {
   saveData('works_data', worksData);
   closeModal('work-modal');
   renderWorks();
+  showWorkDetail(obj.id);
 }
 
 function editCurrentWork() {
@@ -1662,7 +1677,7 @@ function toggleCharPF(p) {
 
 let currentDetailId = null;
 
-function showDetail(id) {
+function showDetail(id, pushHistory = true) {
   const c = characters.find(x => x.id === id);
   if (!c) return;
   currentDetailId = id;
@@ -1686,6 +1701,7 @@ function showDetail(id) {
   document.getElementById('page-detail').classList.add('active');
   document.getElementById('page-detail').scrollTop = 0;
   window.scrollTo(0, 0);
+  if (pushHistory) history.pushState({ detail: 'char', id }, '', '');
 }
 
 function closeDetail() {
@@ -1777,6 +1793,7 @@ function saveChar() {
   saveData('chars', characters);
   closeModal('char-modal');
   renderCharacters();
+  showDetail(data.id);
 }
 
 function deleteCharFromModal() {
