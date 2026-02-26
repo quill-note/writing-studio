@@ -1139,12 +1139,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">ジャンル（複数可）</label>
-      <div class="platform-select" id="genre-select">
-        <button class="platform-btn" onclick="toggleGenre(this)">BL</button>
-        <button class="platform-btn" onclick="toggleGenre(this)">青春</button>
-        <button class="platform-btn" onclick="toggleGenre(this)">ファンタジー</button>
-        <button class="platform-btn" onclick="toggleGenre(this)">恋愛（男女）</button>
-      </div>
+      <div class="platform-select" id="genre-select"></div>
       <div style="margin-top:6px; display:flex; gap:6px;">
         <input type="text" class="form-input" id="fw-genre-custom" placeholder="その他のジャンル" style="flex:1; font-size:12px;">
         <button onclick="addCustomGenre()" style="padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px;">追加</button>
@@ -1433,7 +1428,7 @@ function openAddWorkModal() {
   document.getElementById('fw-genre-custom').value = '';
   document.getElementById('fw-platform-custom').value = '';
   document.getElementById('work-delete-btn').style.display = 'none';
-  document.querySelectorAll('#genre-select .platform-btn').forEach(b => b.classList.remove('selected'));
+  renderGenreSelect([]);
   renderWorkPlatformSelect([]);
   document.getElementById('work-modal').classList.add('active');
 }
@@ -1457,9 +1452,7 @@ function openEditWorkModal(id) {
   document.getElementById('fw-platform-custom').value = '';
   document.getElementById('work-delete-btn').style.display = '';
   // ジャンルボタン
-  document.querySelectorAll('#genre-select .platform-btn').forEach(b => {
-    b.classList.toggle('selected', currentWorkGenres.includes(b.textContent));
-  });
+  renderGenreSelect(currentWorkGenres);
   // 掲載サイトボタン
   renderWorkPlatformSelect(currentWorkPlatforms);
   document.getElementById('work-modal').classList.add('active');
@@ -1472,18 +1465,31 @@ function toggleGenre(btn) {
   else { currentWorkGenres.push(val); }
 }
 
+const DEFAULT_GENRES = ['BL', '青春', 'ファンタジー', '恋愛（男女）'];
+
+function renderGenreSelect(selected) {
+  currentWorkGenres = [...selected];
+  const container = document.getElementById('genre-select');
+  const customGenres = JSON.parse(localStorage.getItem('sosaku_genres')||'[]');
+  const fromData = worksData.flatMap(w => w.genres || []);
+  const allGenres = [...new Set([...DEFAULT_GENRES, ...customGenres, ...fromData])];
+  container.innerHTML = allGenres.map(g =>
+    `<button class="platform-btn ${currentWorkGenres.includes(g)?'selected':''}" onclick="toggleGenre(this)">${esc(g)}</button>`
+  ).join('');
+}
+
 function addCustomGenre() {
   const input = document.getElementById('fw-genre-custom');
   const val = input.value.trim();
   if (!val || currentWorkGenres.includes(val)) return;
   currentWorkGenres.push(val);
-  // ボタンを追加
-  const container = document.getElementById('genre-select');
-  const btn = document.createElement('button');
-  btn.className = 'platform-btn selected';
-  btn.textContent = val;
-  btn.onclick = function() { toggleGenre(this); };
-  container.appendChild(btn);
+  // localStorageにも保存して次回以降も表示
+  const saved = JSON.parse(localStorage.getItem('sosaku_genres')||'[]');
+  if (!saved.includes(val)) {
+    saved.push(val);
+    localStorage.setItem('sosaku_genres', JSON.stringify(saved));
+  }
+  renderGenreSelect(currentWorkGenres);
   input.value = '';
 }
 
@@ -2338,7 +2344,8 @@ function exportData(format='json') {
     dict: dictItems,
     worksData,
     works: JSON.parse(localStorage.getItem('sosaku_works')||'[]'),
-    platforms: JSON.parse(localStorage.getItem('sosaku_platforms')||'[]')
+    platforms: JSON.parse(localStorage.getItem('sosaku_platforms')||'[]'),
+    genres: JSON.parse(localStorage.getItem('sosaku_genres')||'[]')
   };
   const dateStr = new Date().toISOString().split('T')[0];
 
@@ -2441,6 +2448,7 @@ function importData(event) {
         if (data.worksData) { worksData = data.worksData; saveData('works_data', worksData); }
         if (data.works) localStorage.setItem('sosaku_works', JSON.stringify(data.works));
         if (data.platforms) localStorage.setItem('sosaku_platforms', JSON.stringify(data.platforms));
+        if (data.genres) localStorage.setItem('sosaku_genres', JSON.stringify(data.genres));
         alert('インポートが完了しました！');
         renderCharacters(); renderContests(); renderDict(); renderWorks();
         updateBackupStats();
