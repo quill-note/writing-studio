@@ -1692,9 +1692,9 @@ function showDetail(id, pushHistory = true) {
       ${work?.status ? `<span class="badge badge-${work.status==='完結'?'completed':work.status==='執筆中'?'writing':'planning'}">${esc(work.status)}</span>` : ''}
     </div>
     ${(work?.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${work.platforms.map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
+    ${c.memo ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">メモ</span></div><div style="font-size:14px; color:var(--text); line-height:1.7; white-space:pre-wrap; padding:0 4px; margin-bottom:12px">${esc(c.memo)}</div>` : ''}
     ${c.work ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}</span></div>` : ''}
     ${(work?.genres||[]).length ? `<div class="detail-tags" style="margin-top:4px;margin-bottom:8px">${work.genres.map(g => `<span class="tag">#${esc(g)}</span>`).join('')}</div>` : ''}
-    ${c.memo ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">メモ</span></div><div style="font-size:14px; color:var(--text); line-height:1.7; white-space:pre-wrap; padding:0 4px; margin-bottom:12px">${esc(c.memo)}</div>` : ''}
     ${work ? `<div style="text-align:right;margin-top:12px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="goToWorkDetail('${c.work.replace(/'/g,"\\'")}')">作品タブで見る →</span></div>` : ''}
   `;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
