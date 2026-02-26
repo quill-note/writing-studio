@@ -2674,6 +2674,40 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 
 // データなし。空の状態でスタート。
 
+// ==================== 一回限り：人物データから作品を自動登録 ====================
+(function autoRegisterWorks() {
+  if (localStorage.getItem('sosaku_works_auto_imported')) return; // 実行済みならスキップ
+  const workNames = [...new Set(characters.map(c => c.work).filter(Boolean))];
+  const existingNames = worksData.map(w => w.name);
+  let added = 0;
+  workNames.forEach(name => {
+    if (existingNames.includes(name)) return;
+    // 人物データからこの作品の情報を集める
+    const chars = characters.filter(c => c.work === name);
+    const platforms = [...new Set(chars.flatMap(c => c.platforms || []))];
+    const status = chars[0]?.status || '';
+    const length = chars[0]?.length || '';
+    worksData.push({
+      id: Date.now() + added,
+      name,
+      genres: [],
+      status: status === '公開' ? '公開中' : status === '非公開' ? '非公開' : '',
+      length,
+      platforms,
+      synopsis: '',
+      worldview: '',
+      memo: '',
+      updatedAt: new Date().toISOString()
+    });
+    added++;
+  });
+  if (added > 0) {
+    saveData('works_data', worksData);
+    console.log(`作品を${added}件自動登録しました`);
+  }
+  localStorage.setItem('sosaku_works_auto_imported', 'true');
+})();
+
 // 初期レンダリング
 renderWorks();
 renderCharacters();
