@@ -111,7 +111,7 @@
   }
   .search-wrap input {
     width: 100%;
-    padding: 8px 12px 8px 32px;
+    padding: 8px 32px 8px 32px;
     border: 1.5px solid var(--border);
     border-radius: 20px;
     background: var(--surface2);
@@ -120,6 +120,20 @@
     outline: none;
   }
   .search-wrap input:focus { border-color: var(--primary-light); }
+  .search-clear {
+    position: absolute;
+    right: 8px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-size: 18px;
+    cursor: pointer;
+    display: none;
+    background: none;
+    border: none;
+    padding: 2px;
+    line-height: 1;
+  }
+  .search-clear.show { display: block; }
   .search-icon {
     position: absolute;
     left: 10px; top: 50%;
@@ -287,7 +301,16 @@
     color: var(--tag-text);
     cursor: pointer;
   }
+  .tag-site {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    cursor: pointer;
+  }
   .tag:hover { background: var(--primary-light); color: white; }
+  .tag-site:hover { background: var(--primary-light); color: white; }
 
   /* ナビゲーション */
   .bottom-nav {
@@ -777,7 +800,8 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="works-search" placeholder="作品検索..." oninput="renderWorks();showSuggestions('works')" onfocus="showSuggestions('works')" autocomplete="off">
+        <input type="text" id="works-search" placeholder="作品検索..." oninput="renderWorks();showSuggestions('works');toggleClear('works-search')" onfocus="showSuggestions('works')" autocomplete="off">
+        <button class="search-clear mi" id="works-search-clear" onclick="clearSearch('works-search');renderWorks()">close</button>
         <div class="suggest-list" id="works-suggestions"></div>
       </div>
       <button class="btn-add" onclick="openAddWorkModal()">＋ 追加</button>
@@ -814,7 +838,8 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="char-search" placeholder="キャラクター検索..." oninput="renderCharacters();showSuggestions('char')" onfocus="showSuggestions('char')" autocomplete="off">
+        <input type="text" id="char-search" placeholder="キャラクター検索..." oninput="renderCharacters();showSuggestions('char');toggleClear('char-search')" onfocus="showSuggestions('char')" autocomplete="off">
+        <button class="search-clear mi" id="char-search-clear" onclick="clearSearch('char-search');renderCharacters()">close</button>
         <div class="suggest-list" id="char-suggestions"></div>
       </div>
       <button class="btn-add" onclick="openAddCharModal()">＋ 追加</button>
@@ -837,7 +862,8 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="contest-search" placeholder="コンテスト検索..." oninput="renderContests();showSuggestions('contest')" onfocus="showSuggestions('contest')" autocomplete="off">
+        <input type="text" id="contest-search" placeholder="コンテスト検索..." oninput="renderContests();showSuggestions('contest');toggleClear('contest-search')" onfocus="showSuggestions('contest')" autocomplete="off">
+        <button class="search-clear mi" id="contest-search-clear" onclick="clearSearch('contest-search');renderContests()">close</button>
         <div class="suggest-list" id="contest-suggestions"></div>
       </div>
       <button class="btn-add" onclick="openAddContestModal()">＋ 追加</button>
@@ -861,7 +887,8 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="dict-search" placeholder="表現検索..." oninput="renderDict();showSuggestions('dict')" onfocus="showSuggestions('dict')" autocomplete="off">
+        <input type="text" id="dict-search" placeholder="表現検索..." oninput="renderDict();showSuggestions('dict');toggleClear('dict-search')" onfocus="showSuggestions('dict')" autocomplete="off">
+        <button class="search-clear mi" id="dict-search-clear" onclick="clearSearch('dict-search');renderDict()">close</button>
         <div class="suggest-list" id="dict-suggestions"></div>
       </div>
       <button class="btn-add" onclick="openAddDictModal()">＋ 追加</button>
@@ -1365,7 +1392,8 @@ function renderWorks() {
   const wCountLabel = list.length < worksData.length ? `${list.length}件表示` : '';
   el.innerHTML = (wCountLabel ? `<div style="text-align:right;font-size:11px;color:var(--text3);padding:2px 4px;">${wCountLabel}</div>` : '') + list.map(w => {
     const charCount = characters.filter(c => c.work === w.name).length;
-    const tags = [...(w.genres||[]).map(g => '#'+g), ...(w.length ? ['#'+w.length] : []), ...(w.platforms||[]).map(p => '#'+p)];
+    const genreTags = [...(w.genres||[]).map(g => '#'+g), ...(w.length ? ['#'+w.length] : [])];
+    const siteTags = (w.platforms||[]).map(p => '#'+p);
     return `<div class="card" onclick="showWorkDetail(${w.id})">
       <div class="card-header">
         <div class="card-name">${esc(w.name)}</div>
@@ -1374,7 +1402,8 @@ function renderWorks() {
           ${w.status ? `<span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
         </div>
       </div>
-      ${tags.length ? `<div class="card-tags" style="margin-bottom:6px">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${genreTags.length ? `<div class="card-tags" style="margin-bottom:4px">${genreTags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${siteTags.length ? `<div class="card-tags" style="margin-bottom:6px">${siteTags.map(t => `<span class="tag-site">${esc(t)}</span>`).join('')}</div>` : ''}
       ${w.synopsis ? `<div style="font-size:12px;color:var(--text2);margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(w.synopsis)}</div>` : ''}
       ${charCount > 0 ? `<div style="text-align:right"><span style="font-size:11px;color:var(--text3);white-space:nowrap"><span class="mi" style="font-size:12px">person</span>${charCount}人</span></div>` : ''}
     </div>`;
@@ -1634,7 +1663,7 @@ function renderCharacters() {
       ${c.work ? `<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>` : ''}
       ${(c.lastnameKana||c.firstnameKana) ? `<div class="card-reading">${esc((c.lastnameKana||''))} ${esc((c.firstnameKana||''))}</div>` : (c.reading ? `<div class="card-reading">${esc(c.reading)}</div>` : '')}
       <div class="card-tags">
-        ${(c.platforms||[]).map(p => `<span class="tag" onclick="setCharFilter('platform','${p.replace(/'/g,"\\'")}'); event.stopPropagation()">#${esc(p)}</span>`).join('')}
+        ${(c.platforms||[]).map(p => `<span class="tag-site">#${esc(p)}</span>`).join('')}
       </div>
     </div>
   `).join('');
@@ -2551,6 +2580,21 @@ function closeModal(id) {
 function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== 検索クリア ====================
+function clearSearch(inputId) {
+  const input = document.getElementById(inputId);
+  input.value = '';
+  toggleClear(inputId);
+  // 予測候補も閉じる
+  const suggestMap = { 'works-search': 'works-suggestions', 'char-search': 'char-suggestions', 'contest-search': 'contest-suggestions', 'dict-search': 'dict-suggestions' };
+  if (suggestMap[inputId]) document.getElementById(suggestMap[inputId]).classList.remove('open');
+}
+
+function toggleClear(inputId) {
+  const btn = document.getElementById(inputId + '-clear');
+  if (btn) btn.classList.toggle('show', document.getElementById(inputId).value.length > 0);
 }
 
 // ==================== 検索予測候補 ====================
