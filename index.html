@@ -299,7 +299,6 @@
     border-radius: 8px;
     background: var(--tag-bg);
     color: var(--tag-text);
-    cursor: pointer;
   }
   .tag-site {
     font-size: 11px;
@@ -307,10 +306,8 @@
     border-radius: 8px;
     background: var(--tag-bg);
     color: var(--tag-text);
-    cursor: pointer;
   }
-  .tag:hover { background: var(--primary-light); color: white; }
-  .tag-site:hover { background: var(--primary-light); color: white; }
+  .tag:hover, .tag-site:hover { opacity: 0.85; }
 
   /* ナビゲーション */
   .bottom-nav {
@@ -1022,7 +1019,7 @@
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">投稿先</label>
+      <label class="form-label">掲載サイト</label>
       <div class="platform-select" id="platform-select">
         <button class="platform-btn" onclick="togglePlatform(this)">pixiv</button>
         <button class="platform-btn" onclick="togglePlatform(this)">エブリスタ</button>
@@ -1031,7 +1028,7 @@
         <button class="platform-btn" onclick="togglePlatform(this)">小説家になろう</button>
       </div>
       <div style="margin-top:6px; display:flex; gap:6px;">
-        <input type="text" class="form-input" id="f-platform-custom" placeholder="その他の投稿先" style="flex:1; font-size:12px;">
+        <input type="text" class="form-input" id="f-platform-custom" placeholder="その他の掲載サイト" style="flex:1; font-size:12px;">
         <button onclick="addCustomPlatform()" style="padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px;">追加</button>
       </div>
     </div>
@@ -1422,8 +1419,12 @@ function showWorkDetail(id) {
   document.getElementById('work-detail-content').innerHTML = `
     <div class="detail-name">${esc(w.name)}</div>
     ${(w.genres||[]).length ? `<div class="detail-tags" style="margin-bottom:12px">${w.genres.map(g => `<span class="tag">#${esc(g)}</span>`).join('')}</div>` : ''}
-    ${w.publish || w.status || w.length ? `<div class="detail-row"><span class="detail-key">ステータス</span><span class="detail-val">${[w.publish,w.status,w.length].filter(Boolean).join(' / ')}</span></div>` : ''}
-    ${(w.platforms||[]).length ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><span class="detail-val">${w.platforms.join(', ')}</span></div>` : ''}
+    <div class="card-badges" style="margin-bottom:12px">
+      ${w.publish ? `<span class="badge badge-${w.publish==='公開'?'publish':'private'}">${esc(w.publish)}</span>` : ''}
+      ${w.status ? `<span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
+      ${w.length ? `<span class="badge badge-${w.length==='長編'?'long':'short'}">${esc(w.length)}</span>` : ''}
+    </div>
+    ${(w.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${w.platforms.map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
     ${w.synopsis ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">あらすじ</span></div><div style="font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;padding:0 4px;">${esc(w.synopsis)}</div>` : ''}
     ${w.worldview ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">世界観メモ</span></div><div style="font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;padding:0 4px;">${esc(w.worldview)}</div>` : ''}
     ${w.memo ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">メモ</span><span class="detail-val">${esc(w.memo)}</span></div>` : ''}
@@ -1698,8 +1699,9 @@ function showDetail(id) {
       ${c.status ? `<span class="badge badge-${c.status==='公開'?'public':c.status==='非公開'?'private':'draft'}">${esc(c.status)}</span>` : ''}
       ${c.length ? `<span class="badge badge-${c.length==='長編'?'long':'short'}">${esc(c.length)}</span>` : ''}
     </div>
-    ${c.work ? `<div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}${worksData.some(w => w.name === c.work) ? ` <span style="font-size:12px;color:var(--primary);cursor:pointer;margin-left:6px" onclick="goToWorkDetail('${c.work.replace(/'/g,"\\'")}')">作品タブで見る →</span>` : ''}</span></div>` : ''}
-    ${(c.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">投稿先</span><div class="detail-val detail-tags">${(c.platforms).map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
+    ${c.work ? `<div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}</span></div>` : ''}
+    ${c.work && worksData.some(w => w.name === c.work) ? `<div style="text-align:right;margin-bottom:8px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="goToWorkDetail('${c.work.replace(/'/g,"\\'")}')">作品タブで見る →</span></div>` : ''}
+    ${(c.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${(c.platforms).map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
     ${c.memo ? `<div class="detail-divider"></div><div style="font-size:14px; color:var(--text); line-height:1.7; white-space:pre-wrap">${esc(c.memo)}</div>` : ''}
   `;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2411,7 +2413,7 @@ function exportData(format='json') {
         if (c.length) info.push(c.length);
         if (info.length) txt += `／${info.join('・')}`;
         txt += '\n';
-        if (c.platforms?.length) txt += `    投稿先: ${c.platforms.join(', ')}\n`;
+        if (c.platforms?.length) txt += `    掲載サイト: ${c.platforms.join(', ')}\n`;
         if (c.memo) txt += `    ※${c.memo}\n`;
       });
       txt += '\n';
@@ -2645,7 +2647,7 @@ function showSuggestions(type) {
     works.forEach(w => { if (w.toLowerCase().includes(q)) candidates.push({ text: w, label: '作品' }); });
     // タグ
     const tags = [...new Set(characters.flatMap(c => c.platforms || []))];
-    tags.forEach(t => { if (t.toLowerCase().includes(q)) candidates.push({ text: t, label: '投稿先' }); });
+    tags.forEach(t => { if (t.toLowerCase().includes(q)) candidates.push({ text: t, label: '掲載サイト' }); });
   }
 
   if (type === 'contest') {
