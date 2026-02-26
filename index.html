@@ -1003,36 +1003,6 @@
       <input type="hidden" id="f-work">
     </div>
     <div class="form-group">
-      <label class="form-label">公開状態</label>
-      <select class="form-select" id="f-status">
-        <option value="">未設定</option>
-        <option value="公開">公開</option>
-        <option value="非公開">非公開</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">種別</label>
-      <select class="form-select" id="f-length">
-        <option value="">未設定</option>
-        <option value="長編">長編</option>
-        <option value="短編">短編</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">掲載サイト</label>
-      <div class="platform-select" id="platform-select">
-        <button class="platform-btn" onclick="togglePlatform(this)">pixiv</button>
-        <button class="platform-btn" onclick="togglePlatform(this)">エブリスタ</button>
-        <button class="platform-btn" onclick="togglePlatform(this)">ノベマ！</button>
-        <button class="platform-btn" onclick="togglePlatform(this)">カクヨム</button>
-        <button class="platform-btn" onclick="togglePlatform(this)">小説家になろう</button>
-      </div>
-      <div style="margin-top:6px; display:flex; gap:6px;">
-        <input type="text" class="form-input" id="f-platform-custom" placeholder="その他の掲載サイト" style="flex:1; font-size:12px;">
-        <button onclick="addCustomPlatform()" style="padding:6px 10px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; font-size:12px;">追加</button>
-      </div>
-    </div>
-    <div class="form-group">
       <label class="form-label">メモ</label>
       <textarea class="form-textarea" id="f-memo" placeholder="自由記入欄"></textarea>
     </div>
@@ -1419,21 +1389,22 @@ function showWorkDetail(id) {
   document.getElementById('work-detail-content').innerHTML = `
     <div class="detail-name">${esc(w.name)}</div>
     ${(w.genres||[]).length ? `<div class="detail-tags" style="margin-bottom:12px">${w.genres.map(g => `<span class="tag">#${esc(g)}</span>`).join('')}</div>` : ''}
-    <div class="card-badges" style="margin-bottom:12px">
+    <div class="card-badges" style="margin-bottom:12px;flex-wrap:wrap;gap:4px 4px;">
       ${w.publish ? `<span class="badge badge-${w.publish==='公開'?'publish':'private'}">${esc(w.publish)}</span>` : ''}
-      ${w.status ? `<span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
       ${w.length ? `<span class="badge badge-${w.length==='長編'?'long':'short'}">${esc(w.length)}</span>` : ''}
+      ${w.status ? `<div style="width:100%"></div><span class="badge badge-${w.status==='完結'?'completed':w.status==='執筆中'?'writing':'planning'}">${esc(w.status)}</span>` : ''}
     </div>
     ${(w.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${w.platforms.map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
-    ${w.synopsis ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">あらすじ</span></div><div style="font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;padding:0 4px;">${esc(w.synopsis)}</div>` : ''}
-    ${w.worldview ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">世界観メモ</span></div><div style="font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;padding:0 4px;">${esc(w.worldview)}</div>` : ''}
-    ${w.memo ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">メモ</span><span class="detail-val">${esc(w.memo)}</span></div>` : ''}
+    ${(w.synopsis || w.worldview || w.memo) ? `<div class="detail-divider"></div>` : ''}
+    ${w.synopsis ? `<div class="detail-row"><span class="detail-key">あらすじ</span></div><div style="font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;padding:0 4px;margin-bottom:12px">${esc(w.synopsis)}</div>` : ''}
+    ${w.worldview ? `<div class="detail-row"><span class="detail-key">世界観メモ</span></div><div style="font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;padding:0 4px;margin-bottom:12px">${esc(w.worldview)}</div>` : ''}
+    ${w.memo ? `<div class="detail-row"><span class="detail-key">メモ</span></div><div style="font-size:14px;color:var(--text);line-height:1.7;white-space:pre-wrap;padding:0 4px;margin-bottom:12px">${esc(w.memo)}</div>` : ''}
     <div class="detail-divider"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="margin-bottom:8px">
       <span class="detail-key" style="min-width:auto">登場人物（${charList.length}人）</span>
-      ${charList.length > 0 ? `<span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="goToCharByWork('${w.name.replace(/'/g,"\\'")}')">人物タブで見る →</span>` : ''}
     </div>
     ${charList.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${charList.map(c => `<span style="font-size:13px;padding:4px 10px;background:var(--primary-pale);border-radius:8px;color:var(--text)">${esc(c.name)}</span>`).join('')}</div>` : `<div style="font-size:13px;color:var(--text3)">まだ登場人物が登録されていません</div>`}
+    ${charList.length > 0 ? `<div style="text-align:right;margin-top:12px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="goToCharByWork('${w.name.replace(/'/g,"\\'")}')">人物タブで見る →</span></div>` : ''}
   `;
 }
 
@@ -1635,9 +1606,11 @@ function renderCharacters() {
   const searchTerms = searchRaw.split(/\s+/).filter(Boolean);
   let list = characters.filter(c => {
     if (searchTerms.length === 0) return true;
+    const work = worksData.find(w => w.name === c.work);
     const haystack = [
       c.name, c.lastname, c.firstname, c.lastnameKana, c.firstnameKana,
-      c.reading, c.work, c.status, c.length, ...(c.platforms||[]), c.memo
+      c.reading, c.work, work?.publish, work?.status, work?.length,
+      ...(work?.platforms||[]), c.memo
     ].filter(Boolean).join(' ').toLowerCase();
     return searchTerms.every(t => haystack.includes(t));
   });
@@ -1658,22 +1631,21 @@ function renderCharacters() {
     return;
   }
   const countLabel = list.length < characters.length ? `${list.length}件表示` : '';
-  el.innerHTML = (countLabel ? `<div style="text-align:right;font-size:11px;color:var(--text3);padding:2px 4px;">${countLabel}</div>` : '') + list.map(c => `
-    <div class="card" onclick="showDetail(${c.id})">
+  el.innerHTML = (countLabel ? `<div style="text-align:right;font-size:11px;color:var(--text3);padding:2px 4px;">${countLabel}</div>` : '') + list.map(c => {
+    const work = worksData.find(w => w.name === c.work);
+    return `<div class="card" onclick="showDetail(${c.id})">
       <div class="card-header">
         <div class="card-name">${esc(c.name)}</div>
         <div class="card-badges">
-          ${c.status ? `<span class="badge badge-${c.status==='公開'?'public':c.status==='非公開'?'private':'draft'}">${esc(c.status)}</span>` : ''}
-          ${c.length ? `<span class="badge badge-${c.length==='長編'?'long':'short'}">${esc(c.length)}</span>` : ''}
+          ${work?.publish ? `<span class="badge badge-${work.publish==='公開'?'publish':'private'}">${esc(work.publish)}</span>` : ''}
+          ${work?.length ? `<span class="badge badge-${work.length==='長編'?'long':'short'}">${esc(work.length)}</span>` : ''}
         </div>
       </div>
       ${c.work ? `<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>` : ''}
       ${(c.lastnameKana||c.firstnameKana) ? `<div class="card-reading">${esc((c.lastnameKana||''))} ${esc((c.firstnameKana||''))}</div>` : (c.reading ? `<div class="card-reading">${esc(c.reading)}</div>` : '')}
-      <div class="card-tags">
-        ${(c.platforms||[]).map(p => `<span class="tag-site">#${esc(p)}</span>`).join('')}
-      </div>
-    </div>
-  `).join('');
+      ${(work?.platforms||[]).length > 0 ? `<div class="card-tags">${work.platforms.map(p => `<span class="tag-site">#${esc(p)}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ==================== 詳細 ====================
@@ -1692,17 +1664,18 @@ function showDetail(id) {
   if (!c) return;
   currentDetailId = id;
   detailPrevPage = currentPage;
+  const work = worksData.find(w => w.name === c.work);
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-name">${esc(c.name)}</div>
     ${(c.lastnameKana||c.firstnameKana) ? `<div class="detail-reading">${esc(c.lastnameKana||'')} ${esc(c.firstnameKana||'')}</div>` : (c.reading ? `<div class="detail-reading">${esc(c.reading)}</div>` : '')}
     <div class="card-badges" style="margin-bottom:12px">
-      ${c.status ? `<span class="badge badge-${c.status==='公開'?'public':c.status==='非公開'?'private':'draft'}">${esc(c.status)}</span>` : ''}
-      ${c.length ? `<span class="badge badge-${c.length==='長編'?'long':'short'}">${esc(c.length)}</span>` : ''}
+      ${work?.publish ? `<span class="badge badge-${work.publish==='公開'?'publish':'private'}">${esc(work.publish)}</span>` : ''}
+      ${work?.length ? `<span class="badge badge-${work.length==='長編'?'long':'short'}">${esc(work.length)}</span>` : ''}
     </div>
-    ${c.work ? `<div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}</span></div>` : ''}
-    ${c.work && worksData.some(w => w.name === c.work) ? `<div style="text-align:right;margin-bottom:8px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="goToWorkDetail('${c.work.replace(/'/g,"\\'")}')">作品タブで見る →</span></div>` : ''}
-    ${(c.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${(c.platforms).map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
+    ${(work?.platforms||[]).length > 0 ? `<div class="detail-row"><span class="detail-key">掲載サイト</span><div class="detail-val detail-tags">${work.platforms.map(p=>`<span class="tag">#${esc(p)}</span>`).join('')}</div></div>` : ''}
+    ${c.work ? `<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">作品名</span><span class="detail-val">${esc(c.work)}</span></div>` : ''}
     ${c.memo ? `<div class="detail-divider"></div><div style="font-size:14px; color:var(--text); line-height:1.7; white-space:pre-wrap">${esc(c.memo)}</div>` : ''}
+    ${work ? `<div style="text-align:right;margin-top:12px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="goToWorkDetail('${c.work.replace(/'/g,"\\'")}')">作品タブで見る →</span></div>` : ''}
   `;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-detail').classList.add('active');
@@ -1737,18 +1710,13 @@ let currentPlatforms = [];
 
 function openAddCharModal() {
   editingCharId = null;
-  currentPlatforms = [];
   document.getElementById('char-modal-title').textContent = 'キャラクター追加';
   document.getElementById('f-lastname').value = '';
   document.getElementById('f-firstname').value = '';
   document.getElementById('f-lastname-kana').value = '';
   document.getElementById('f-firstname-kana').value = '';
-  document.getElementById('f-work').value = '';
-  document.getElementById('f-status').value = '';
-  document.getElementById('f-length').value = '';
   document.getElementById('f-memo').value = '';
   document.getElementById('char-delete-btn').style.display = 'none';
-  renderPlatformSelect([]);
   document.getElementById('f-work-input').value = '';
   document.getElementById('f-work').value = '';
   document.getElementById('f-work-list').classList.remove('open');
@@ -1757,18 +1725,13 @@ function openAddCharModal() {
 
 function openEditCharModal(c) {
   editingCharId = c.id;
-  currentPlatforms = [...(c.platforms||[])];
   document.getElementById('char-modal-title').textContent = 'キャラクター編集';
   document.getElementById('f-lastname').value = c.lastname||'';
   document.getElementById('f-firstname').value = c.firstname||'';
   document.getElementById('f-lastname-kana').value = c.lastnameKana||'';
   document.getElementById('f-firstname-kana').value = c.firstnameKana||'';
-  document.getElementById('f-work').value = c.work||'';
-  document.getElementById('f-status').value = c.status||'';
-  document.getElementById('f-length').value = c.length||'';
   document.getElementById('f-memo').value = c.memo||'';
   document.getElementById('char-delete-btn').style.display = 'block';
-  renderPlatformSelect(currentPlatforms);
   document.getElementById('f-work-input').value = c.work||'';
   document.getElementById('f-work').value = c.work||'';
   document.getElementById('f-work-list').classList.remove('open');
@@ -1794,9 +1757,6 @@ function saveChar() {
     firstnameKana: document.getElementById('f-firstname-kana').value.trim(),
     reading: [document.getElementById('f-lastname-kana').value.trim(), document.getElementById('f-firstname-kana').value.trim()].filter(Boolean).join(' '),
     work,
-    status: document.getElementById('f-status').value,
-    length: document.getElementById('f-length').value,
-    platforms: [...currentPlatforms],
     memo: document.getElementById('f-memo').value.trim(),
     updatedAt: new Date().toISOString()
   };
