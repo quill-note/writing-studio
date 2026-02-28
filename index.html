@@ -2380,7 +2380,8 @@ function exportData(format='json') {
     platforms: JSON.parse(localStorage.getItem('sosaku_platforms')||'[]'),
     genres: JSON.parse(localStorage.getItem('sosaku_genres')||'[]')
   };
-  const dateStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0] + '_' + now.getHours().toString().padStart(2,'0') + now.getMinutes().toString().padStart(2,'0');
 
   if (format === 'txt') {
     let txt = `創作管理バックアップ ${dateStr}\n`;
