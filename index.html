@@ -1315,8 +1315,12 @@ function showPage(pageId, pushHistory = true) {
 
 window.addEventListener('popstate', (e) => {
   if (e.state?.page) {
+    const savedScroll = e.state.scrollY || 0;
+    const pageEl = document.getElementById(e.state.page);
+    pageEl.style.visibility = 'hidden';
     showPage(e.state.page, false);
-    setTimeout(() => window.scrollTo(0, e.state.scrollY || 0), 50);
+    window.scrollTo(0, savedScroll);
+    requestAnimationFrame(() => { pageEl.style.visibility = ''; });
   } else if (e.state?.detail) {
     if (e.state.detail === 'work' && e.state.id) showWorkDetail(e.state.id, false);
     else if (e.state.detail === 'char' && e.state.id) showDetail(e.state.id, false);
