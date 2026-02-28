@@ -1292,9 +1292,8 @@ let detailPrevPage = 'page-works';
 
 function showPage(pageId, pushHistory = true) {
   // 現在のスクロール位置を保存
-  if (pushHistory && currentPage) {
-    const scrollY = window.scrollY;
-    history.replaceState({ ...history.state, scrollY }, '', '');
+  if (currentPage) {
+    sessionStorage.setItem('scroll_' + currentPage, window.scrollY);
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
@@ -1303,7 +1302,7 @@ function showPage(pageId, pushHistory = true) {
   if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
   currentPage = pageId;
   if (pushHistory) {
-    history.pushState({ page: pageId, scrollY: 0 }, '', '');
+    history.pushState({ page: pageId }, '', '');
     window.scrollTo(0, 0);
   }
   if (pageId === 'page-backup') updateBackupStats();
@@ -1315,12 +1314,24 @@ function showPage(pageId, pushHistory = true) {
 
 window.addEventListener('popstate', (e) => {
   if (e.state?.page) {
-    const savedScroll = e.state.scrollY || 0;
-    const pageEl = document.getElementById(e.state.page);
+    const pageId = e.state.page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const pageEl = document.getElementById(pageId);
     pageEl.style.visibility = 'hidden';
-    showPage(e.state.page, false);
-    window.scrollTo(0, savedScroll);
-    requestAnimationFrame(() => { pageEl.style.visibility = ''; });
+    pageEl.classList.add('active');
+    const navMap = { 'page-works': 'nav-works', 'page-character': 'nav-character', 'page-contest': 'nav-contest', 'page-dict': 'nav-dict' };
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
+    currentPage = pageId;
+    if (pageId === 'page-works') renderWorks();
+    if (pageId === 'page-character') renderCharacters();
+    if (pageId === 'page-contest') renderContests();
+    if (pageId === 'page-dict') renderDict();
+    const savedScroll = parseInt(sessionStorage.getItem('scroll_' + pageId) || '0');
+    requestAnimationFrame(() => {
+      window.scrollTo(0, savedScroll);
+      requestAnimationFrame(() => { pageEl.style.visibility = ''; });
+    });
   } else if (e.state?.detail) {
     if (e.state.detail === 'work' && e.state.id) showWorkDetail(e.state.id, false);
     else if (e.state.detail === 'char' && e.state.id) showDetail(e.state.id, false);
@@ -1401,8 +1412,8 @@ function renderWorks() {
 }
 
 function showWorkDetail(id, pushHistory = true) {
-  if (pushHistory) {
-    history.replaceState({ ...history.state, scrollY: window.scrollY }, '', '');
+  if (pushHistory && currentPage) {
+    sessionStorage.setItem('scroll_' + currentPage, window.scrollY);
   }
   viewingWorkId = id;
   const w = worksData.find(x => x.id === id);
@@ -1705,8 +1716,8 @@ function toggleCharPF(p) {
 let currentDetailId = null;
 
 function showDetail(id, pushHistory = true) {
-  if (pushHistory) {
-    history.replaceState({ ...history.state, scrollY: window.scrollY }, '', '');
+  if (pushHistory && currentPage) {
+    sessionStorage.setItem('scroll_' + currentPage, window.scrollY);
   }
   const c = characters.find(x => x.id === id);
   if (!c) return;
