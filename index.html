@@ -1291,24 +1291,32 @@ let currentPage = 'page-works';
 let detailPrevPage = 'page-works';
 
 function showPage(pageId, pushHistory = true) {
+  // 現在のスクロール位置を保存
+  if (pushHistory && currentPage) {
+    const scrollY = window.scrollY;
+    history.replaceState({ ...history.state, scrollY }, '', '');
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const navMap = { 'page-works': 'nav-works', 'page-character': 'nav-character', 'page-contest': 'nav-contest', 'page-dict': 'nav-dict' };
   if (navMap[pageId]) document.getElementById(navMap[pageId]).classList.add('active');
   currentPage = pageId;
-  if (pushHistory) history.pushState({ page: pageId }, '', '');
+  if (pushHistory) {
+    history.pushState({ page: pageId, scrollY: 0 }, '', '');
+    window.scrollTo(0, 0);
+  }
   if (pageId === 'page-backup') updateBackupStats();
   if (pageId === 'page-works') renderWorks();
   if (pageId === 'page-character') renderCharacters();
   if (pageId === 'page-contest') renderContests();
   if (pageId === 'page-dict') renderDict();
-  window.scrollTo(0, 0);
 }
 
 window.addEventListener('popstate', (e) => {
   if (e.state?.page) {
     showPage(e.state.page, false);
+    setTimeout(() => window.scrollTo(0, e.state.scrollY || 0), 50);
   } else if (e.state?.detail) {
     if (e.state.detail === 'work' && e.state.id) showWorkDetail(e.state.id, false);
     else if (e.state.detail === 'char' && e.state.id) showDetail(e.state.id, false);
@@ -1389,6 +1397,9 @@ function renderWorks() {
 }
 
 function showWorkDetail(id, pushHistory = true) {
+  if (pushHistory) {
+    history.replaceState({ ...history.state, scrollY: window.scrollY }, '', '');
+  }
   viewingWorkId = id;
   const w = worksData.find(x => x.id === id);
   if (!w) return;
@@ -1690,6 +1701,9 @@ function toggleCharPF(p) {
 let currentDetailId = null;
 
 function showDetail(id, pushHistory = true) {
+  if (pushHistory) {
+    history.replaceState({ ...history.state, scrollY: window.scrollY }, '', '');
+  }
   const c = characters.find(x => x.id === id);
   if (!c) return;
   currentDetailId = id;
