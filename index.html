@@ -1222,7 +1222,15 @@
   </div>
 </div>
 
+<div id="sosaku-toast" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#3d2f2e;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none"></div>
+
 <script>
+function showToast(msg) {
+  var t = document.getElementById('sosaku-toast');
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(function(){ t.style.opacity = '0'; }, 2000);
+}
+
 // ==================== データ管理 ====================
 const STORAGE_KEYS = { chars: 'sosaku_chars', contests: 'sosaku_contests', dict: 'sosaku_dict', works_data: 'sosaku_works_data' };
 const useCS = !!(window.storage && window.storage.get);
