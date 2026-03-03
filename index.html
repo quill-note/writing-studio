@@ -905,6 +905,7 @@
     </div>
   </div>
   <div class="backup-page">
+    <div id="gist-settings-area"></div>
     <p class="backup-note">
       データはこの端末のストレージに保存されています。<br>
       定期的にバックアップを取ることをお勧めします。
@@ -1297,6 +1298,130 @@ function saveData(key, data) {
   if (useCS) { try { window.storage.set(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {} }
   saveToIDB(STORAGE_KEYS[key], data);
   updateLastModified();
+  saveToGist();
+}
+
+// ─── GitHub Gist 保存 ───
+const GIST_TOKEN_KEY = 'sosaku-gist-token';
+const GIST_ID_KEY = 'sosaku-gist-id';
+const GIST_FILENAME = 'sosaku-backup-data.json';
+
+function getGistToken() { return localStorage.getItem(GIST_TOKEN_KEY) || ''; }
+function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
+
+function getAllData() {
+  return {
+    chars: characters,
+    contests: contests,
+    dict: dictItems,
+    works_data: worksData,
+    last_modified: localStorage.getItem('sosaku_last_modified')
+  };
+}
+
+function restoreAllData(data) {
+  if (data.chars) { characters = data.chars; localStorage.setItem(STORAGE_KEYS.chars, JSON.stringify(data.chars)); saveToIDB(STORAGE_KEYS.chars, data.chars); }
+  if (data.contests) { contests = data.contests; localStorage.setItem(STORAGE_KEYS.contests, JSON.stringify(data.contests)); saveToIDB(STORAGE_KEYS.contests, data.contests); }
+  if (data.dict) { dictItems = data.dict; localStorage.setItem(STORAGE_KEYS.dict, JSON.stringify(data.dict)); saveToIDB(STORAGE_KEYS.dict, data.dict); }
+  if (data.works_data) { worksData = data.works_data; localStorage.setItem(STORAGE_KEYS.works_data, JSON.stringify(data.works_data)); saveToIDB(STORAGE_KEYS.works_data, data.works_data); }
+  renderCharacters(); renderContests(); renderDict(); renderWorks();
+}
+
+async function saveToGist() {
+  const token = getGistToken();
+  if (!token) return;
+
+  const payload = { files: {} };
+  payload.files[GIST_FILENAME] = { content: JSON.stringify(getAllData(), null, 2) };
+
+  try {
+    const gistId = getGistId();
+    let res;
+    if (gistId) {
+      res = await fetch('https://api.github.com/gists/' + gistId, {
+        method: 'PATCH',
+        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      payload.description = '創作管理 バックアップ';
+      payload.public = false;
+      res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem(GIST_ID_KEY, data.id);
+    } else {
+      console.error('Gist save failed:', res.status);
+    }
+  } catch(e) { console.error('Gist save error:', e); }
+}
+
+async function loadFromGist() {
+  const token = getGistToken();
+  const gistId = getGistId();
+  if (!token || !gistId) return null;
+
+  try {
+    const res = await fetch('https://api.github.com/gists/' + gistId, {
+      headers: { 'Authorization': 'token ' + token }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.files && data.files[GIST_FILENAME]) {
+        return JSON.parse(data.files[GIST_FILENAME].content);
+      }
+    }
+  } catch(e) { console.error('Gist load error:', e); }
+  return null;
+}
+
+function saveGistToken() {
+  const token = document.getElementById('f-gist-token')?.value?.trim();
+  if (!token || !token.startsWith('ghp_')) { showToast('正しいトークンを入力してください'); return; }
+  localStorage.setItem(GIST_TOKEN_KEY, token);
+  saveToGist().then(() => {
+    renderBackupPage();
+    showToast('トークンを保存しました');
+  });
+}
+
+function clearGistToken() {
+  if (!confirm('トークンを削除しますか？クラウド保存が無効になります。')) return;
+  localStorage.removeItem(GIST_TOKEN_KEY);
+  localStorage.removeItem(GIST_ID_KEY);
+  renderBackupPage();
+  showToast('トークンを削除しました');
+}
+
+function manualGistSync() {
+  saveToGist().then(() => showToast('クラウドに同期しました'));
+}
+
+function manualGistRestore() {
+  loadFromGist().then(data => {
+    if (data && (data.chars || data.contests || data.dict || data.works_data)) {
+      restoreAllData(data);
+      showToast('クラウドから復元しました');
+    } else {
+      showToast('クラウドにデータがありません');
+    }
+  });
+}
+
+async function tryRestoreFromGist() {
+  if (!getGistToken()) return;
+  const hasData = characters.length > 0 || contests.length > 0 || dictItems.length > 0 || worksData.length > 0;
+  if (hasData) return;
+  const data = await loadFromGist();
+  if (data && (data.chars?.length > 0 || data.contests?.length > 0 || data.dict?.length > 0 || data.works_data?.length > 0)) {
+    restoreAllData(data);
+    showToast('クラウドから復元しました');
+  }
 }
 
 function updateLastModified() {
@@ -1403,6 +1528,40 @@ window.addEventListener('popstate', (e) => {
 function openBackupPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-backup').classList.add('active');
+  updateBackupStats();
+  renderGistSettingsUI();
+}
+
+function renderGistSettingsUI() {
+  const area = document.getElementById('gist-settings-area');
+  if (!area) return;
+  const token = getGistToken();
+  const gistId = getGistId();
+  const connected = token && gistId;
+  const statusText = connected ? '<span style="color:var(--success);font-weight:600">接続済み ✓</span>' :
+    token ? '<span style="color:#c48a2a;font-weight:600">トークン設定済み（初回保存で接続）</span>' :
+    '<span style="color:var(--text3)">未設定</span>';
+
+  area.innerHTML = `
+    <div style="font-size:12px; font-weight:700; color:var(--text3); margin-bottom:8px; letter-spacing:0.05em">クラウド保存（GitHub Gist）</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:13px;margin-bottom:10px">状態: ${statusText}</div>
+      ${!token ? `
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">GitHubのPersonal Access Tokenを設定すると、データが自動でクラウドに保存されます。</div>
+        <input style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:8px;box-sizing:border-box" type="password" id="f-gist-token" placeholder="ghp_ で始まるトークンを貼り付け">
+        <button class="backup-btn backup-export" onclick="saveGistToken()">トークンを保存</button>
+      ` : `
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="backup-btn backup-export" style="flex:1;min-width:100px" onclick="manualGistSync()">今すぐ同期</button>
+          <button class="backup-btn backup-import" style="flex:1;min-width:100px" onclick="manualGistRestore()">クラウドから復元</button>
+        </div>
+        <button style="margin-top:8px;background:none;border:1px solid #e0a0a0;color:#c44040;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%" onclick="clearGistToken()">トークン削除</button>
+      `}
+    </div>`;
+}
+
+function renderBackupPage() {
+  renderGistSettingsUI();
   updateBackupStats();
 }
 
@@ -2860,6 +3019,7 @@ renderDict();
 displayLastModified();
 initFromClaudeStorage();
 tryRestoreFromIDB();
+tryRestoreFromGist();
 
 // ==================== PWA: Service Worker登録 ====================
 if ('serviceWorker' in navigator) {
