@@ -1297,6 +1297,7 @@ function saveData(key, data) {
   try { localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {}
   if (useCS) { try { window.storage.set(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {} }
   saveToIDB(STORAGE_KEYS[key], data);
+  saveToIDB("_gist_credentials", { token: getGistToken(), gistId: getGistId() });
   updateLastModified();
   saveToGist();
 }
@@ -1308,6 +1309,22 @@ const GIST_FILENAME = 'sosaku-backup-data.json';
 
 function getGistToken() { return localStorage.getItem(GIST_TOKEN_KEY) || ''; }
 function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
+
+function setGistToken(token) {
+  setGistToken(token);
+  saveToIDB('_gist_credentials', { token: token, gistId: getGistId() });
+}
+function setGistId(id) {
+  localStorage.setItem(GIST_ID_KEY, id);
+  saveToIDB('_gist_credentials', { token: getGistToken(), gistId: id });
+}
+
+async function restoreGistCredentials() {
+  const creds = await loadFromIDB('_gist_credentials');
+  if (!creds) return;
+  if (creds.token && !getGistToken()) localStorage.setItem(GIST_TOKEN_KEY, creds.token);
+  if (creds.gistId && !getGistId()) localStorage.setItem(GIST_ID_KEY, creds.gistId);
+}
 
 function getAllData() {
   return {
@@ -1354,7 +1371,7 @@ async function saveToGist() {
     }
     if (res.ok) {
       const data = await res.json();
-      localStorage.setItem(GIST_ID_KEY, data.id);
+      setGistId(data.id);
     } else {
       console.error('Gist save failed:', res.status);
     }
@@ -1383,7 +1400,7 @@ async function loadFromGist() {
 function saveGistToken() {
   const token = document.getElementById('f-gist-token')?.value?.trim();
   if (!token || !token.startsWith('ghp_')) { showToast('正しいトークンを入力してください'); return; }
-  localStorage.setItem(GIST_TOKEN_KEY, token);
+  setGistToken(token);
   saveToGist().then(() => {
     renderBackupPage();
     showToast('トークンを保存しました');
@@ -1394,6 +1411,7 @@ function clearGistToken() {
   if (!confirm('トークンを削除しますか？クラウド保存が無効になります。')) return;
   localStorage.removeItem(GIST_TOKEN_KEY);
   localStorage.removeItem(GIST_ID_KEY);
+  saveToIDB('_gist_credentials', { token: '', gistId: '' });
   renderBackupPage();
   showToast('トークンを削除しました');
 }
@@ -3019,7 +3037,7 @@ renderDict();
 displayLastModified();
 initFromClaudeStorage();
 tryRestoreFromIDB();
-tryRestoreFromGist();
+restoreGistCredentials().then(() => tryRestoreFromGist());
 
 // ==================== PWA: Service Worker登録 ====================
 if ('serviceWorker' in navigator) {
