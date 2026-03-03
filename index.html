@@ -1365,6 +1365,7 @@ async function saveToGist() {
     if (gistId) {
       res = await fetch('https://api.github.com/gists/' + gistId, {
         method: 'PATCH',
+        cache: 'no-store',
         headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -1373,6 +1374,7 @@ async function saveToGist() {
       payload.public = false;
       res = await fetch('https://api.github.com/gists', {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -1381,9 +1383,9 @@ async function saveToGist() {
       const data = await res.json();
       setGistId(data.id);
     } else {
-      console.error('Gist save failed:', res.status);
+      throw new Error('Gist保存失敗: ' + res.status);
     }
-  } catch(e) { console.error('Gist save error:', e); }
+  } catch(e) { console.error('Gist save error:', e); throw e; }
 }
 
 async function loadFromGist() {
@@ -1393,6 +1395,7 @@ async function loadFromGist() {
 
   try {
     const res = await fetch('https://api.github.com/gists/' + gistId, {
+      cache: 'no-store',
       headers: { 'Authorization': 'token ' + token }
     });
     if (res.ok) {
@@ -1407,11 +1410,16 @@ async function loadFromGist() {
 
 function saveGistToken() {
   const token = document.getElementById('f-gist-token')?.value?.trim();
-  if (!token || !token.startsWith('ghp_')) { showToast('正しいトークンを入力してください'); return; }
+  if (!token) { showToast('トークンを入力してください'); return; }
+  if (!token.startsWith('ghp_')) { showToast('ghp_ で始まるトークンを入力してください'); return; }
   setGistToken(token);
+  showToast('保存中...');
   saveToGist().then(() => {
-    renderBackupPage();
+    renderGistSettingsUI();
     showToast('トークンを保存しました');
+  }).catch(e => {
+    console.error('Gist error:', e);
+    showToast('エラー: ' + e.message);
   });
 }
 
