@@ -1352,62 +1352,89 @@ function restoreAllData(data) {
   renderCharacters(); renderContests(); renderDict(); renderWorks();
 }
 
+async function findGistByFilename(token) {
+  try {
+    var res = await fetch("https://api.github.com/gists", {
+      cache: "no-store",
+      headers: { "Authorization": "token " + token }
+    });
+    if (!res.ok) return null;
+    var gists = await res.json();
+    for (var i = 0; i < gists.length; i++) {
+      if (gists[i].files && gists[i].files[GIST_FILENAME]) {
+        return gists[i].id;
+      }
+    }
+  } catch(e) { console.error("Gist search error:", e); }
+  return null;
+}
+
 async function saveToGist() {
-  const token = getGistToken();
+  var token = getGistToken();
   if (!token) return;
 
-  const payload = { files: {} };
+  var gistId = getGistId();
+  if (!gistId) {
+    gistId = await findGistByFilename(token);
+    if (gistId) setGistId(gistId);
+  }
+
+  var payload = { files: {} };
   payload.files[GIST_FILENAME] = { content: JSON.stringify(getAllData(), null, 2) };
 
   try {
-    const gistId = getGistId();
-    let res;
+    var res;
     if (gistId) {
-      res = await fetch('https://api.github.com/gists/' + gistId, {
-        method: 'PATCH',
-        cache: 'no-store',
-        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      res = await fetch("https://api.github.com/gists/" + gistId, {
+        method: "PATCH",
+        cache: "no-store",
+        headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
     } else {
-      payload.description = '創作管理 バックアップ';
+      payload.description = "sosaku backup";
       payload.public = false;
-      res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        cache: 'no-store',
-        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      res = await fetch("https://api.github.com/gists", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
     }
     if (res.ok) {
-      const data = await res.json();
+      var data = await res.json();
       setGistId(data.id);
     } else {
-      throw new Error('Gist保存失敗: ' + res.status);
+      throw new Error("Gist save failed: " + res.status);
     }
-  } catch(e) { console.error('Gist save error:', e); throw e; }
+  } catch(e) { console.error("Gist save error:", e); throw e; }
 }
 
 async function loadFromGist() {
-  const token = getGistToken();
-  const gistId = getGistId();
-  if (!token || !gistId) return null;
+  var token = getGistToken();
+  if (!token) return null;
+
+  var gistId = getGistId();
+  if (!gistId) {
+    gistId = await findGistByFilename(token);
+    if (gistId) setGistId(gistId);
+  }
+  if (!gistId) return null;
 
   try {
-    const res = await fetch('https://api.github.com/gists/' + gistId, {
-      cache: 'no-store',
-      headers: { 'Authorization': 'token ' + token }
+    var res = await fetch("https://api.github.com/gists/" + gistId, {
+      cache: "no-store",
+      headers: { "Authorization": "token " + token }
     });
     if (res.ok) {
-      const data = await res.json();
+      var data = await res.json();
       if (data.files && data.files[GIST_FILENAME]) {
         return JSON.parse(data.files[GIST_FILENAME].content);
       }
     }
-  } catch(e) { console.error('Gist load error:', e); }
+  } catch(e) { console.error("Gist load error:", e); }
   return null;
 }
-
 function saveGistToken() {
   const token = document.getElementById('f-gist-token')?.value?.trim();
   if (!token) { showToast('トークンを入力してください'); return; }
