@@ -1319,7 +1319,7 @@ function getGistToken() { return localStorage.getItem(GIST_TOKEN_KEY) || ''; }
 function getGistId() { return localStorage.getItem(GIST_ID_KEY) || ''; }
 
 function setGistToken(token) {
-  setGistToken(token);
+  localStorage.setItem(GIST_TOKEN_KEY, token);
   saveToIDB('_gist_credentials', { token: token, gistId: getGistId() });
 }
 function setGistId(id) {
