@@ -1226,6 +1226,65 @@
 const STORAGE_KEYS = { chars: 'sosaku_chars', contests: 'sosaku_contests', dict: 'sosaku_dict', works_data: 'sosaku_works_data' };
 const useCS = !!(window.storage && window.storage.get);
 
+// ─── IndexedDB 二重保存 ───
+const IDB_NAME = 'sosaku-backup-db';
+const IDB_STORE = 'backup';
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveToIDB(storageKey, data) {
+  try {
+    const db = await openIDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(JSON.stringify(data), storageKey);
+  } catch(e) { console.error('IDB save error:', e); }
+}
+
+async function loadFromIDB(storageKey) {
+  try {
+    const db = await openIDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(storageKey);
+      req.onsuccess = () => {
+        if (req.result) resolve(JSON.parse(req.result));
+        else resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    });
+  } catch(e) { console.error('IDB load error:', e); return null; }
+}
+
+async function tryRestoreFromIDB() {
+  let restored = false;
+  for (const [key, skey] of Object.entries(STORAGE_KEYS)) {
+    const current = loadData(key);
+    if (current.length === 0) {
+      const idbData = await loadFromIDB(skey);
+      if (idbData && idbData.length > 0) {
+        localStorage.setItem(skey, JSON.stringify(idbData));
+        if (key === 'chars') characters = idbData;
+        if (key === 'contests') contests = idbData;
+        if (key === 'dict') dictItems = idbData;
+        if (key === 'works_data') worksData = idbData;
+        restored = true;
+      }
+    }
+  }
+  if (restored) {
+    renderCharacters(); renderContests(); renderDict(); renderWorks();
+    showToast('バックアップから復元しました');
+  }
+}
+
+// ─── localStorage ───
 function loadData(key) {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS[key]);
@@ -1236,6 +1295,7 @@ function loadData(key) {
 function saveData(key, data) {
   try { localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {}
   if (useCS) { try { window.storage.set(STORAGE_KEYS[key], JSON.stringify(data)); } catch(e) {} }
+  saveToIDB(STORAGE_KEYS[key], data);
   updateLastModified();
 }
 
@@ -2799,6 +2859,7 @@ renderContests();
 renderDict();
 displayLastModified();
 initFromClaudeStorage();
+tryRestoreFromIDB();
 
 // ==================== PWA: Service Worker登録 ====================
 if ('serviceWorker' in navigator) {
