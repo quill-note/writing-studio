@@ -1375,6 +1375,10 @@ async function saveToGist() {
   var token = getGistToken();
   if (!token) return;
 
+  var allData = getAllData();
+  var hasData = (allData.chars && allData.chars.length > 0) || (allData.contests && allData.contests.length > 0) || (allData.dict && allData.dict.length > 0) || (allData.works_data && allData.works_data.length > 0);
+  if (!hasData) return;
+
   var gistId = getGistId();
   if (!gistId) {
     gistId = await findGistByFilename(token);
@@ -1382,7 +1386,7 @@ async function saveToGist() {
   }
 
   var payload = { files: {} };
-  payload.files[GIST_FILENAME] = { content: JSON.stringify(getAllData(), null, 2) };
+  payload.files[GIST_FILENAME] = { content: JSON.stringify(allData, null, 2) };
 
   try {
     var res;
