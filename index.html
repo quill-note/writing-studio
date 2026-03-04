@@ -1307,7 +1307,9 @@ function saveData(key, data) {
   saveToIDB(STORAGE_KEYS[key], data);
   saveToIDB("_gist_credentials", { token: getGistToken(), gistId: getGistId() });
   updateLastModified();
-  saveToGist();
+  if (data && data.length > 0) {
+    saveToGist();
+  }
 }
 
 // ─── GitHub Gist 保存 ───
