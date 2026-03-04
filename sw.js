@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sosaku-v3';
+const CACHE_NAME = 'sosaku-v4';
 const urlsToCache = ['./', './index.html'];
 
 self.addEventListener('install', e => {
@@ -16,6 +16,9 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.url.includes('api.github.com')) {
+    return;
+  }
   e.respondWith(
     fetch(e.request).then(res => {
       const clone = res.clone();
