@@ -1351,7 +1351,8 @@ function restoreAllData(data) {
   if (data.contests) { contests = data.contests; localStorage.setItem(STORAGE_KEYS.contests, JSON.stringify(data.contests)); saveToIDB(STORAGE_KEYS.contests, data.contests); }
   if (data.dict) { dictItems = data.dict; localStorage.setItem(STORAGE_KEYS.dict, JSON.stringify(data.dict)); saveToIDB(STORAGE_KEYS.dict, data.dict); }
   if (data.works_data) { worksData = data.works_data; localStorage.setItem(STORAGE_KEYS.works_data, JSON.stringify(data.works_data)); saveToIDB(STORAGE_KEYS.works_data, data.works_data); }
-  renderCharacters(); renderContests(); renderDict(); renderWorks();
+  updateLastModified();
+  renderWorks(); renderCharacters(); renderContests(); renderDict();
 }
 
 async function findGistByFilename(token) {
