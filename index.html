@@ -754,7 +754,7 @@
     border-bottom: 1px solid var(--border);
   }
   .select-item:last-child { border-bottom: none; }
-  .select-item:hover, .select-item:active { background: var(--primary-pale); }
+  .select-item:hover, .select-item:active, .select-item.keyboard-focus { background: var(--primary-pale); }
   .select-item.add-new {
     color: var(--primary);
     font-weight: 600;
@@ -996,7 +996,7 @@
       <label class="form-label">作品名 *</label>
       <div class="searchable-select" id="f-work-wrap">
         <input type="text" class="form-input" id="f-work-input" placeholder="作品名を検索または入力" autocomplete="off"
-          onfocus="showWorkList('f')" oninput="filterWorkList('f')">
+          onfocus="showWorkList('f')" oninput="filterWorkList('f')" onkeydown="handleWorkListKeydown(event,'f')">
         <div class="select-list" id="f-work-list"></div>
       </div>
       <input type="hidden" id="f-work">
@@ -1025,7 +1025,7 @@
       <label class="form-label">応募作品</label>
       <div class="searchable-select" id="fc-work-wrap">
         <input type="text" class="form-input" id="fc-work-input" placeholder="作品名を検索または入力" autocomplete="off"
-          onfocus="showWorkList('fc')" oninput="filterWorkList('fc')">
+          onfocus="showWorkList('fc')" oninput="filterWorkList('fc')" onkeydown="handleWorkListKeydown(event,'fc')">
         <div class="select-list" id="fc-work-list"></div>
       </div>
       <input type="hidden" id="fc-work">
@@ -1125,7 +1125,7 @@
       <label class="form-label">作品名 *</label>
       <div class="searchable-select" id="fw-work-wrap">
         <input type="text" class="form-input" id="fw-work-input" placeholder="作品名を検索または入力" autocomplete="off"
-          onfocus="showWorkList('fw')" oninput="filterWorkList('fw')">
+          onfocus="showWorkList('fw')" oninput="filterWorkList('fw')" onkeydown="handleWorkListKeydown(event,'fw')">
         <div class="select-list" id="fw-work-list"></div>
       </div>
       <input type="hidden" id="fw-name">
@@ -2191,6 +2191,38 @@ function pickWork(prefix, val) {
   const hiddenMap = { 'f': 'f-work', 'fc': 'fc-work', 'fw': 'fw-name' };
   if (hiddenMap[prefix]) document.getElementById(hiddenMap[prefix]).value = val;
   document.getElementById(prefix + '-work-list').classList.remove('open');
+}
+
+function handleWorkListKeydown(e, prefix) {
+  const listEl = document.getElementById(prefix + '-work-list');
+  if (!listEl || !listEl.classList.contains('open')) return;
+
+  const items = listEl.querySelectorAll('.select-item');
+  if (!items.length) return;
+
+  const current = listEl.querySelector('.select-item.keyboard-focus');
+  let idx = Array.from(items).indexOf(current);
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    idx = (idx + 1) % items.length;
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    idx = (idx - 1 + items.length) % items.length;
+  } else if (e.key === 'Enter' && current) {
+    e.preventDefault();
+    current.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    return;
+  } else if (e.key === 'Escape') {
+    listEl.classList.remove('open');
+    return;
+  } else {
+    return;
+  }
+
+  items.forEach(el => el.classList.remove('keyboard-focus'));
+  items[idx].classList.add('keyboard-focus');
+  items[idx].scrollIntoView({ block: 'nearest' });
 }
 
 function getWorkFromForm(selectId, inputId) {
