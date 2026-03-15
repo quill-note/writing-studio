@@ -168,7 +168,7 @@
     gap: 6px;
   }
   .suggest-item:last-child { border-bottom: none; }
-  .suggest-item:hover, .suggest-item:active { background: var(--primary-pale); }
+  .suggest-item:hover, .suggest-item:active, .suggest-item.keyboard-focus { background: var(--primary-pale); }
   .suggest-type {
     font-size: 10px;
     padding: 1px 6px;
@@ -797,7 +797,7 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="works-search" placeholder="作品検索..." oninput="renderWorks();showSuggestions('works');toggleClear('works-search')" onfocus="showSuggestions('works')" autocomplete="off">
+        <input type="text" id="works-search" placeholder="作品検索..." oninput="renderWorks();showSuggestions('works');toggleClear('works-search')" onfocus="showSuggestions('works')" onkeydown="handleSuggestKeydown(event,'works')" autocomplete="off">
         <button class="search-clear mi" id="works-search-clear" onclick="clearSearch('works-search');renderWorks()">close</button>
         <div class="suggest-list" id="works-suggestions"></div>
       </div>
@@ -835,7 +835,7 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="char-search" placeholder="キャラクター検索..." oninput="renderCharacters();showSuggestions('char');toggleClear('char-search')" onfocus="showSuggestions('char')" autocomplete="off">
+        <input type="text" id="char-search" placeholder="キャラクター検索..." oninput="renderCharacters();showSuggestions('char');toggleClear('char-search')" onfocus="showSuggestions('char')" onkeydown="handleSuggestKeydown(event,'char')" autocomplete="off">
         <button class="search-clear mi" id="char-search-clear" onclick="clearSearch('char-search');renderCharacters()">close</button>
         <div class="suggest-list" id="char-suggestions"></div>
       </div>
@@ -859,7 +859,7 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="contest-search" placeholder="コンテスト検索..." oninput="renderContests();showSuggestions('contest');toggleClear('contest-search')" onfocus="showSuggestions('contest')" autocomplete="off">
+        <input type="text" id="contest-search" placeholder="コンテスト検索..." oninput="renderContests();showSuggestions('contest');toggleClear('contest-search')" onfocus="showSuggestions('contest')" onkeydown="handleSuggestKeydown(event,'contest')" autocomplete="off">
         <button class="search-clear mi" id="contest-search-clear" onclick="clearSearch('contest-search');renderContests()">close</button>
         <div class="suggest-list" id="contest-suggestions"></div>
       </div>
@@ -884,7 +884,7 @@
     <div class="search-bar">
       <div class="search-wrap">
         <span class="search-icon mi" style="font-size:16px">search</span>
-        <input type="text" id="dict-search" placeholder="表現検索..." oninput="renderDict();showSuggestions('dict');toggleClear('dict-search')" onfocus="showSuggestions('dict')" autocomplete="off">
+        <input type="text" id="dict-search" placeholder="表現検索..." oninput="renderDict();showSuggestions('dict');toggleClear('dict-search')" onfocus="showSuggestions('dict')" onkeydown="handleSuggestKeydown(event,'dict')" autocomplete="off">
         <button class="search-clear mi" id="dict-search-clear" onclick="clearSearch('dict-search');renderDict()">close</button>
         <div class="suggest-list" id="dict-suggestions"></div>
       </div>
@@ -2916,6 +2916,40 @@ function clearSearch(inputId) {
 function toggleClear(inputId) {
   const btn = document.getElementById(inputId + '-clear');
   if (btn) btn.classList.toggle('show', document.getElementById(inputId).value.length > 0);
+}
+
+// ==================== 検索予測候補 キーボード操作 ====================
+function handleSuggestKeydown(e, type) {
+  const listMap = { works: 'works-suggestions', char: 'char-suggestions', contest: 'contest-suggestions', dict: 'dict-suggestions' };
+  const listEl = document.getElementById(listMap[type]);
+  if (!listEl || !listEl.classList.contains('open')) return;
+
+  const items = listEl.querySelectorAll('.suggest-item');
+  if (!items.length) return;
+
+  const current = listEl.querySelector('.suggest-item.keyboard-focus');
+  let idx = Array.from(items).indexOf(current);
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    idx = (idx + 1) % items.length;
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    idx = (idx - 1 + items.length) % items.length;
+  } else if (e.key === 'Enter' && current) {
+    e.preventDefault();
+    current.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    return;
+  } else if (e.key === 'Escape') {
+    listEl.classList.remove('open');
+    return;
+  } else {
+    return;
+  }
+
+  items.forEach(el => el.classList.remove('keyboard-focus'));
+  items[idx].classList.add('keyboard-focus');
+  items[idx].scrollIntoView({ block: 'nearest' });
 }
 
 // ==================== 検索予測候補 ====================
