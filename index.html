@@ -283,6 +283,55 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
 .split-card pre { font-family: var(--font-mincho); font-size: 13px; line-height: 1.9; white-space: pre-wrap; word-wrap: break-word; max-height: 280px; overflow-y: auto; color: var(--text2); }
 .split-ellipsis { text-align: center; color: var(--text3); padding: 12px 0; font-size: 12px; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); margin: 4px 0; }
 
+/* アコーディオンカード */
+.accordion-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px var(--shadow);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+.accordion-card:hover { box-shadow: 0 4px 14px var(--shadow); }
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  cursor: pointer;
+  user-select: none;
+  gap: 10px;
+}
+.accordion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.accordion-icon-wrap {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--primary-pale);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.accordion-icon-wrap .mi { color: var(--primary); font-size: 20px; }
+.accordion-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.accordion-subtitle { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.accordion-arrow {
+  font-size: 22px; color: var(--text3);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+.accordion-card.open .accordion-arrow { transform: rotate(180deg); }
+.accordion-body {
+  display: none;
+  padding: 0 18px 18px;
+  border-top: 1px solid var(--border);
+}
+.accordion-card.open .accordion-body { display: block; }
+
 /* 4項目チェックリスト */
 .checklist-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 6px var(--shadow); }
 .checklist-title { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
@@ -495,8 +544,8 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
 
 <!-- ========== 執筆補助ページ ========== -->
 <div id="page-writing" class="page">
-  <div class="header" style="margin-bottom:0;padding-bottom:0">
-    <div class="header-top" style="margin-bottom:0">
+  <div class="header">
+    <div class="header-top">
       <h1>執筆補助</h1>
       <div style="display:flex;gap:6px;align-items:center">
         <div style="font-size:11px;color:var(--text2);background:var(--primary-pale);padding:4px 10px;border-radius:20px">
@@ -510,14 +559,16 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
         </select>
       </div>
     </div>
+    <div class="search-bar" style="padding-top:2px">
+      <div class="writing-tabs" style="margin:0 -16px -10px;padding:0 16px;overflow-x:auto;scrollbar-width:none;border-bottom:none;background:transparent;flex:1">
+        <button class="wtab-btn active" data-wtab="editor"><span class="mi mi-sm">edit</span>エディタ</button>
+        <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">search</span>推敲チェック</button>
+        <button class="wtab-btn" data-wtab="split"><span class="mi mi-sm">content_cut</span>投稿用分割</button>
+        <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">checklist</span>4項目チェック</button>
+      </div>
+    </div>
   </div>
   <div class="writing-page">
-    <div class="writing-tabs">
-      <button class="wtab-btn active" data-wtab="editor"><span class="mi mi-sm">edit</span>エディタ</button>
-      <button class="wtab-btn" data-wtab="proofread"><span class="mi mi-sm">search</span>推敲チェック</button>
-      <button class="wtab-btn" data-wtab="split"><span class="mi mi-sm">content_cut</span>投稿用分割</button>
-      <button class="wtab-btn" data-wtab="checklist"><span class="mi mi-sm">checklist</span>4項目チェック</button>
-    </div>
 
     <!-- エディタタブ -->
     <div class="wtab-panel active" id="wtab-editor">
@@ -562,30 +613,118 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
       </div>
     </div>
 
-    <!-- 推敲チェックタブ -->
-    <div class="wtab-panel" id="wtab-proofread">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">語尾の連続・表記ゆれ・NGワードをチェックします。</p>
-      <button class="collapse-toggle" id="nc-yureToggle" onclick="ncTog('yure')"><span class="mi">menu_book</span>表記ゆれルール（<span id="nc-yureCt">0</span>件）<span class="mi mi-arrow" style="margin-left:auto">expand_more</span></button>
-      <div class="collapse-body" id="nc-yureBody">
-        <div id="nc-yureList" class="rule-list"></div>
-        <div class="rule-add"><input class="input-text" id="nc-yA" placeholder="例：わたし"><span style="color:var(--text3);flex-shrink:0">↔</span><input class="input-text" id="nc-yB" placeholder="例：私"><button class="btn btn-secondary btn-sm" onclick="ncAddYure()"><span class="mi mi-xs">add</span></button></div>
+    <!-- チェックタブ（4項目＋推敲） -->
+    <div class="wtab-panel" id="wtab-check">
+
+      <!-- 4項目チェック アコーディオン -->
+      <div class="accordion-card" id="acc-checklist">
+        <div class="accordion-header" onclick="toggleAccordion('acc-checklist')">
+          <div class="accordion-header-left">
+            <div class="accordion-icon-wrap"><span class="mi">checklist</span></div>
+            <div>
+              <div class="accordion-title">4項目チェック</div>
+              <div class="accordion-subtitle">推敲前に確認する4つのポイント</div>
+            </div>
+          </div>
+          <span class="mi accordion-arrow">expand_more</span>
+        </div>
+        <div class="accordion-body">
+          <div style="padding-top:14px">
+            <div class="check-item" id="chk-item-0">
+              <input type="checkbox" id="chk-0" onchange="updateChecklist()">
+              <label for="chk-0">
+                <strong>① 感情の重複がない</strong>
+                <span>同じ感情を言葉を変えて繰り返していない。一度表現した感情は次の場面まで引っ張らない。</span>
+              </label>
+            </div>
+            <div class="check-item" id="chk-item-1">
+              <input type="checkbox" id="chk-1" onchange="updateChecklist()">
+              <label for="chk-1">
+                <strong>② 感覚・情景が感情より先に来ている</strong>
+                <span>「嬉しかった」より先に、その場の景色・音・身体感覚が書かれている。</span>
+              </label>
+            </div>
+            <div class="check-item" id="chk-item-2">
+              <input type="checkbox" id="chk-2" onchange="updateChecklist()">
+              <label for="chk-2">
+                <strong>③ 心理描写は山場に集中している</strong>
+                <span>心理描写の密度が高い箇所は、感情が高まる場面に絞られている。序盤・中盤で多用しすぎていない。</span>
+              </label>
+            </div>
+            <div class="check-item" id="chk-item-3">
+              <input type="checkbox" id="chk-3" onchange="updateChecklist()">
+              <label for="chk-3">
+                <strong>④ 一番書きたいシーンに一番文字数をかけている</strong>
+                <span>クライマックスや核心のシーンが、他の場面より分量的に充実している。</span>
+              </label>
+            </div>
+            <div class="checklist-progress">
+              <div class="progress-bar-wrap"><div class="progress-bar" id="chk-progress-bar" style="width:0%"></div></div>
+              <div class="progress-label" id="chk-progress-label">0 / 4</div>
+              <button class="checklist-reset" onclick="resetChecklist()">リセット</button>
+            </div>
+            <div class="checklist-complete" id="chk-complete">
+              <span class="mi" style="color:var(--primary)">check_circle</span>
+              全項目クリア！推敲スタートしましょう✨
+            </div>
+            <!-- Claudeに送るボタン -->
+            <div style="background:var(--primary-pale);border:1.5px solid var(--primary-light);border-radius:12px;padding:14px;margin-top:16px">
+              <div style="font-size:12px;font-weight:700;color:var(--primary-dark);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                <span class="mi mi-sm">auto_awesome</span>Claudeに分析してもらう
+              </div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+                エディタにテキストを貼り付けた状態でボタンを押すと、分析用のプロンプトがコピーされます。Claude.aiに貼り付けて送信してください。
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="copyClaudePrompt()" style="width:100%;justify-content:center;padding:11px">
+                <span class="mi mi-sm">content_copy</span>Claudeに送る文章をコピー
+              </button>
+              <div id="chk-copy-result" style="display:none;margin-top:10px;font-size:12px;color:var(--success);align-items:center;gap:4px">
+                <span class="mi" style="font-size:14px">check_circle</span>コピーしました！Claude.aiに貼り付けて送信してください
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <button class="collapse-toggle" id="nc-ngToggle" onclick="ncTog('ng')" style="margin-top:12px"><span class="mi">block</span>NGリスト（<span id="nc-ngCt">0</span>件）<span class="mi mi-arrow" style="margin-left:auto">expand_more</span></button>
-      <div class="collapse-body" id="nc-ngBody">
-        <div id="nc-ngList" class="rule-list"></div>
-        <div class="rule-add"><input class="input-text" id="nc-ngW" placeholder="例：胸がぎゅっと"><button class="btn btn-secondary btn-sm" onclick="ncAddNg()"><span class="mi mi-xs">add</span></button></div>
+
+      <!-- 推敲チェック アコーディオン -->
+      <div class="accordion-card" id="acc-proof">
+        <div class="accordion-header" onclick="toggleAccordion('acc-proof')">
+          <div class="accordion-header-left">
+            <div class="accordion-icon-wrap"><span class="mi">search</span></div>
+            <div>
+              <div class="accordion-title">推敲チェック</div>
+              <div class="accordion-subtitle">語尾・表記ゆれ・NGワードを自動検出</div>
+            </div>
+          </div>
+          <span class="mi accordion-arrow">expand_more</span>
+        </div>
+        <div class="accordion-body">
+          <div style="padding-top:14px">
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px">語尾の連続・表記ゆれ・NGワードをチェックします。</p>
+            <button class="collapse-toggle" id="nc-yureToggle" onclick="ncTog('yure')"><span class="mi">menu_book</span>表記ゆれルール（<span id="nc-yureCt">0</span>件）<span class="mi mi-arrow" style="margin-left:auto">expand_more</span></button>
+            <div class="collapse-body" id="nc-yureBody">
+              <div id="nc-yureList" class="rule-list"></div>
+              <div class="rule-add"><input class="input-text" id="nc-yA" placeholder="例：わたし"><span style="color:var(--text3);flex-shrink:0">↔</span><input class="input-text" id="nc-yB" placeholder="例：私"><button class="btn btn-secondary btn-sm" onclick="ncAddYure()"><span class="mi mi-xs">add</span></button></div>
+            </div>
+            <button class="collapse-toggle" id="nc-ngToggle" onclick="ncTog('ng')" style="margin-top:12px"><span class="mi">block</span>NGリスト（<span id="nc-ngCt">0</span>件）<span class="mi mi-arrow" style="margin-left:auto">expand_more</span></button>
+            <div class="collapse-body" id="nc-ngBody">
+              <div id="nc-ngList" class="rule-list"></div>
+              <div class="rule-add"><input class="input-text" id="nc-ngW" placeholder="例：胸がぎゅっと"><button class="btn btn-secondary btn-sm" onclick="ncAddNg()"><span class="mi mi-xs">add</span></button></div>
+            </div>
+            <div style="margin:16px 0;display:flex;flex-direction:column;gap:10px">
+              <div class="setting-row" style="gap:8px;padding:0"><span style="font-size:13px">語尾連続：</span><select id="nc-gobiSens" class="input-sel"><option value="2">2回</option><option value="3" selected>3回</option></select></div>
+              <div class="setting-row" style="gap:8px;padding:0;flex-wrap:wrap"><span style="font-size:13px">NG再登場距離：</span><select id="nc-ngDist" class="input-sel"><option value="1000">1000字以内</option><option value="2000" selected>2000字以内</option><option value="3000">3000字以内</option><option value="5000">5000字以内</option></select><span style="font-size:13px;color:var(--text3)">以内に同じ語が出たら警告</span></div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn btn-primary btn-sm" onclick="ncRunProof()"><span class="mi mi-xs">search</span>チェック実行</button>
+              <button class="btn btn-secondary btn-sm" onclick="ncClearProof()" style="color:#c9584a;border-color:#f0d5d1"><span class="mi mi-xs">delete_outline</span>クリア</button>
+            </div>
+            <div class="proof-summary" id="nc-proofSum" style="display:none;margin-top:16px"></div>
+            <div id="nc-proofPlaceholder" style="margin-top:16px"><p style="font-size:13px;color:var(--text3)">チェック結果がここに表示されます。</p></div>
+            <div class="output-area" id="nc-proofText" style="display:none;margin-top:12px;line-height:2.2;min-height:200px"></div>
+          </div>
+        </div>
       </div>
-      <div style="margin:16px 0;display:flex;flex-direction:column;gap:10px">
-        <div class="setting-row" style="gap:8px;padding:0"><span style="font-size:13px">語尾連続：</span><select id="nc-gobiSens" class="input-sel"><option value="2">2回</option><option value="3" selected>3回</option></select></div>
-        <div class="setting-row" style="gap:8px;padding:0;flex-wrap:wrap"><span style="font-size:13px">NG再登場距離：</span><select id="nc-ngDist" class="input-sel"><option value="1000">1000字以内</option><option value="2000" selected>2000字以内</option><option value="3000">3000字以内</option><option value="5000">5000字以内</option></select><span style="font-size:13px;color:var(--text3)">以内に同じ語が出たら警告</span></div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-primary btn-sm" onclick="ncRunProof()"><span class="mi mi-xs">search</span>チェック実行</button>
-        <button class="btn btn-secondary btn-sm" onclick="ncClearProof()" style="color:#c9584a;border-color:#f0d5d1"><span class="mi mi-xs">delete_outline</span>クリア</button>
-      </div>
-      <div class="proof-summary" id="nc-proofSum" style="display:none;margin-top:16px"></div>
-      <div id="nc-proofPlaceholder" style="margin-top:16px"><p style="font-size:13px;color:var(--text3)">チェック結果がここに表示されます。</p></div>
-      <div class="output-area" id="nc-proofText" style="display:none;margin-top:12px;line-height:2.2;min-height:200px"></div>
     </div>
 
     <!-- 投稿用分割タブ -->
@@ -608,77 +747,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
       <div class="split-results" id="nc-spRes"><p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p></div>
     </div>
 
-    <!-- 4項目チェックリストタブ -->
-    <div class="wtab-panel" id="wtab-checklist">
-      <div class="checklist-card">
-        <div class="checklist-title"><span class="mi mi-sm">checklist</span>推敲前4項目チェック</div>
-        <div class="checklist-desc">推敲を始める前に、この4項目を確認しましょう。全部チェックできたら推敲スタート！</div>
-        <div class="check-item" id="chk-item-0">
-          <input type="checkbox" id="chk-0" onchange="updateChecklist()">
-          <label for="chk-0">
-            <strong>① 感情の重複がない</strong>
-            <span>同じ感情を言葉を変えて繰り返していない。一度表現した感情は次の場面まで引っ張らない。</span>
-          </label>
-        </div>
-        <div class="check-item" id="chk-item-1">
-          <input type="checkbox" id="chk-1" onchange="updateChecklist()">
-          <label for="chk-1">
-            <strong>② 感覚・情景が感情より先に来ている</strong>
-            <span>「嬉しかった」より先に、その場の景色・音・身体感覚が書かれている。</span>
-          </label>
-        </div>
-        <div class="check-item" id="chk-item-2">
-          <input type="checkbox" id="chk-2" onchange="updateChecklist()">
-          <label for="chk-2">
-            <strong>③ 心理描写は山場に集中している</strong>
-            <span>心理描写の密度が高い箇所は、感情が高まる場面に絞られている。序盤・中盤で多用しすぎていない。</span>
-          </label>
-        </div>
-        <div class="check-item" id="chk-item-3">
-          <input type="checkbox" id="chk-3" onchange="updateChecklist()">
-          <label for="chk-3">
-            <strong>④ 一番書きたいシーンに一番文字数をかけている</strong>
-            <span>クライマックスや核心のシーンが、他の場面より分量的に充実している。</span>
-          </label>
-        </div>
-        <div class="checklist-progress">
-          <div class="progress-bar-wrap"><div class="progress-bar" id="chk-progress-bar" style="width:0%"></div></div>
-          <div class="progress-label" id="chk-progress-label">0 / 4</div>
-          <button class="checklist-reset" onclick="resetChecklist()">リセット</button>
-        </div>
-        <div class="checklist-complete" id="chk-complete">
-          <span class="mi" style="color:var(--primary)">check_circle</span>
-          全項目クリア！推敲スタートしましょう✨
-        </div>
-      </div>
 
-      <!-- Claudeに送るボタン -->
-      <div style="background:var(--primary-pale);border:1.5px solid var(--primary-light);border-radius:14px;padding:16px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--primary-dark);margin-bottom:6px;display:flex;align-items:center;gap:6px">
-          <span class="mi mi-sm">auto_awesome</span>Claudeに4項目を分析してもらう
-        </div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
-          エディタにテキストを貼り付けた状態でボタンを押すと、分析用のプロンプトがコピーされます。Claude.aiに貼り付けて送信してください。
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="copyClaudePrompt()" style="width:100%;justify-content:center;padding:12px">
-          <span class="mi mi-sm">content_copy</span>Claudeに送る文章をコピー
-        </button>
-        <div id="chk-copy-result" style="display:none;margin-top:10px;font-size:12px;color:var(--success);display:flex;align-items:center;gap:4px">
-          <span class="mi" style="font-size:14px">check_circle</span>コピーしました！Claude.aiに貼り付けて送信してください
-        </div>
-      </div>
-
-      <div style="background:var(--surface2);border-radius:12px;padding:14px;border:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">使い方のヒント</div>
-        <div style="font-size:12px;color:var(--text3);line-height:1.8">
-          ① まずエディタタブにテキストを貼り付ける<br>
-          ② このチェックリストで全体の方向性を確認<br>
-          ③「Claudeに送る文章をコピー」でClaude.aiに貼り付けて分析<br>
-          ④ 推敲チェックタブで表記ゆれ・語尾を確認<br>
-          ⑤ 気になる箇所を修正してNolaに戻す
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2070,6 +2139,14 @@ function ncToast(msg){
 // nc確認
 function ncConfOk(){const cb=_ncConfCallback;document.getElementById('nc-confOvl').classList.remove('show');_ncConfCallback=null;if(cb) cb();}
 function ncConfCancel(){document.getElementById('nc-confOvl').classList.remove('show');_ncConfCallback=null;}
+
+// ============================================================
+// アコーディオン
+// ============================================================
+function toggleAccordion(id){
+  const card=document.getElementById(id);
+  card.classList.toggle('open');
+}
 
 // ============================================================
 // 4項目チェックリスト
