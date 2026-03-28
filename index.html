@@ -651,13 +651,31 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
           全項目クリア！推敲スタートしましょう✨
         </div>
       </div>
+
+      <!-- Claudeに送るボタン -->
+      <div style="background:var(--primary-pale);border:1.5px solid var(--primary-light);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--primary-dark);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <span class="mi mi-sm">auto_awesome</span>Claudeに4項目を分析してもらう
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+          エディタにテキストを貼り付けた状態でボタンを押すと、分析用のプロンプトがコピーされます。Claude.aiに貼り付けて送信してください。
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="copyClaudePrompt()" style="width:100%;justify-content:center;padding:12px">
+          <span class="mi mi-sm">content_copy</span>Claudeに送る文章をコピー
+        </button>
+        <div id="chk-copy-result" style="display:none;margin-top:10px;font-size:12px;color:var(--success);display:flex;align-items:center;gap:4px">
+          <span class="mi" style="font-size:14px">check_circle</span>コピーしました！Claude.aiに貼り付けて送信してください
+        </div>
+      </div>
+
       <div style="background:var(--surface2);border-radius:12px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">使い方のヒント</div>
         <div style="font-size:12px;color:var(--text3);line-height:1.8">
           ① まずエディタタブにテキストを貼り付ける<br>
           ② このチェックリストで全体の方向性を確認<br>
-          ③ 推敲チェックタブで表記ゆれ・語尾を確認<br>
-          ④ 気になる箇所を修正してNolaに戻す
+          ③「Claudeに送る文章をコピー」でClaude.aiに貼り付けて分析<br>
+          ④ 推敲チェックタブで表記ゆれ・語尾を確認<br>
+          ⑤ 気になる箇所を修正してNolaに戻す
         </div>
       </div>
     </div>
@@ -2070,6 +2088,35 @@ function updateChecklist(){
 function resetChecklist(){
   for(let i=0;i<4;i++){document.getElementById('chk-'+i).checked=false;document.getElementById('chk-item-'+i).classList.remove('checked');}
   updateChecklist();
+}
+
+function copyClaudePrompt(){
+  const text=document.getElementById('nc-srcEditor').value.trim();
+  if(!text){showToast('エディタにテキストを貼り付けてください');return;}
+  const prompt=`以下の小説テキストを、4つの観点から分析してください。
+
+【分析する4つの観点】
+① 感情の重複がないか
+　同じ感情を言葉を変えて繰り返していないか。一度表現した感情が次の場面まで引っ張られていないか。
+
+② 感覚・情景が感情より先に来ているか
+　「嬉しかった」「悲しかった」などの感情語より先に、その場の景色・音・身体感覚が描写されているか。
+
+③ 心理描写は山場に集中しているか
+　心理描写の密度が高い箇所は、感情が高まる場面に絞られているか。序盤・中盤で多用しすぎていないか。
+
+④ 一番書きたいシーンに一番文字数をかけているか
+　クライマックスや核心のシーンが、他の場面より分量的に充実しているか。
+
+各項目について「判定（○△×）」「気になる箇所の引用」「改善の方向性」を教えてください。最後に全体の総評を2〜3文でお願いします。
+
+【テキスト】
+${text}`;
+  navigator.clipboard.writeText(prompt).then(()=>{
+    const el=document.getElementById('chk-copy-result');
+    el.style.display='flex';
+    setTimeout(()=>{el.style.display='none';},4000);
+  }).catch(()=>{showToast('コピーに失敗しました');});
 }
 
 // ============================================================
