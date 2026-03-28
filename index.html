@@ -562,9 +562,8 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     <div class="search-bar" style="padding-top:2px">
       <div class="writing-tabs" style="margin:0 -16px -10px;padding:0 16px;overflow-x:auto;scrollbar-width:none;border-bottom:none;background:transparent;flex:1">
         <button class="wtab-btn active" data-wtab="editor"><span class="mi mi-sm">edit</span>エディタ</button>
-        <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">search</span>推敲チェック</button>
+        <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">search</span>推敲</button>
         <button class="wtab-btn" data-wtab="split"><span class="mi mi-sm">content_cut</span>投稿用分割</button>
-        <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">checklist</span>4項目チェック</button>
       </div>
     </div>
   </div>
@@ -1383,7 +1382,7 @@ function addWorkCustomPlatform(){
   renderWorkPlatformSelect(currentWorkPlatforms);input.value='';
 }
 function saveWork(){
-  const name=getWorkFromForm(null,'fw-name');if(!name){alert('作品名を入力してください');return;}
+  const name=getWorkFromForm(null,'fw-name');if(!name){showToast('作品名を入力してください');return;}
   const obj={id:editingWorkId||Date.now(),name,genres:[...currentWorkGenres],publish:document.getElementById('fw-publish').value,status:document.getElementById('fw-status').value,length:document.getElementById('fw-length').value,platforms:[...currentWorkPlatforms],synopsis:document.getElementById('fw-synopsis').value.trim(),worldview:document.getElementById('fw-worldview').value.trim(),memo:document.getElementById('fw-memo').value.trim(),updatedAt:new Date().toISOString()};
   if(editingWorkId){
     const idx=worksData.findIndex(x=>x.id===editingWorkId);
@@ -1488,7 +1487,7 @@ function saveChar(){
   const lastname=document.getElementById('f-lastname').value.trim();
   const firstname=document.getElementById('f-firstname').value.trim();
   const name=[lastname,firstname].filter(Boolean).join(' ');
-  if(!name){alert('名字または名前を入力してください');return;}
+  if(!name){showToast('名字または名前を入力してください');return;}
   const work=getWorkFromForm(null,'f-work');
   if(work) addWorkTitle(work);
   const data={id:editingCharId||Date.now(),name,lastname,firstname,lastnameKana:document.getElementById('f-lastname-kana').value.trim(),firstnameKana:document.getElementById('f-firstname-kana').value.trim(),reading:[document.getElementById('f-lastname-kana').value.trim(),document.getElementById('f-firstname-kana').value.trim()].filter(Boolean).join(' '),work,memo:document.getElementById('f-memo').value.trim(),updatedAt:new Date().toISOString()};
@@ -1637,7 +1636,7 @@ function openEditContestModal(id){
   document.getElementById('contest-modal').classList.add('active');
 }
 function saveContest(){
-  const name=document.getElementById('fc-name').value.trim();if(!name){alert('コンテスト名を入力してください');return;}
+  const name=document.getElementById('fc-name').value.trim();if(!name){showToast('コンテスト名を入力してください');return;}
   const work=getWorkFromForm(null,'fc-work');if(work) addWorkTitle(work);
   const data={id:editingContestId||Date.now(),name,work,url:document.getElementById('fc-url').value.trim(),resultPeriod:document.getElementById('fc-result-period').value.trim(),status:document.getElementById('fc-status').value,platforms:[...currentContestPlatforms],tags:[...currentContestTags],memo:document.getElementById('fc-memo').value.trim(),updatedAt:new Date().toISOString()};
   if(editingContestId){const idx=contests.findIndex(c=>c.id===editingContestId);if(idx>=0)contests[idx]=data;}else{contests.push(data);}
@@ -1736,7 +1735,7 @@ function openEditDictModal(id){
   document.getElementById('dict-modal').classList.add('active');
 }
 function saveDict(){
-  const word=document.getElementById('fd-word').value.trim();if(!word){alert('内容を入力してください');return;}
+  const word=document.getElementById('fd-word').value.trim();if(!word){showToast('内容を入力してください');return;}
   const data={id:editingDictId||Date.now(),word,desc:document.getElementById('fd-desc').value.trim(),tags:[...currentDictTags],updatedAt:new Date().toISOString()};
   if(editingDictId){const idx=dictItems.findIndex(x=>x.id===editingDictId);if(idx>=0)dictItems[idx]=data;}else{dictItems.push(data);}
   saveData('dict',dictItems);closeModal('dict-modal');
@@ -1793,7 +1792,7 @@ function importData(event){
 }
 function openCsvImport(){ document.getElementById('csv-modal').classList.add('active'); }
 function executeCsvImport(){
-  const raw=document.getElementById('csv-input').value.trim();if(!raw){alert('データを貼り付けてください');return;}
+  const raw=document.getElementById('csv-input').value.trim();if(!raw){showToast('データを貼り付けてください');return;}
   const lines=raw.split('\n');let added=0;
   lines.forEach((line,idx)=>{
     const cols=line.split(/\t|,/);if(cols.length<2) return;
@@ -1807,7 +1806,7 @@ function executeCsvImport(){
     added++;
   });
   if(added>0){saveData('chars',characters);renderCharacters();closeModal('csv-modal');showToast(`${added}件インポートしました`);}
-  else{alert('インポートできるデータがありませんでした');}
+  else{showToast('インポートできるデータがありませんでした');}
 }
 
 // ============================================================
@@ -1898,7 +1897,7 @@ document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('cl
 // toast（管理系）
 function showToast(msg){
   var t=document.getElementById('sosaku-toast');t.textContent=msg;t.style.opacity='1';
-  setTimeout(function(){t.style.opacity='0';},2000);
+  setTimeout(function(){t.style.opacity='0';},3000);
 }
 
 // 自動登録（人物→作品）
@@ -1984,7 +1983,9 @@ function ncFmtT(t){
 }
 
 function ncFormatDirect(){
-  const src=document.getElementById('nc-srcEditor').value;const out=ncFmtT(src);
+  const src=document.getElementById('nc-srcEditor').value;
+  if(!src.trim()){showToast('エディタにテキストを貼り付けてください');return;}
+  const out=ncFmtT(src);
   _ncFmtHistory.push(src);document.getElementById('nc-undoBtn').style.display='';
   document.getElementById('nc-srcEditor').value=out;ncUpCt();
   ncToast('体裁を整えました');document.getElementById('nc-fmtResultPanel').style.display='none';
@@ -2030,6 +2031,7 @@ function ncTog(id){document.getElementById('nc-'+id+'Toggle').classList.toggle('
 // 推敲チェック
 function ncRunProof(){
   const text=ncFmtT(document.getElementById('nc-srcEditor').value)||document.getElementById('nc-srcEditor').value;
+  if(!text.trim()){showToast('エディタにテキストを貼り付けてください');return;}
   ncIssues=[];ncIgnored=new Set();
   const sens=+document.getElementById('nc-gobiSens').value;
   const paragraphs=text.split(/\n\n+/);
@@ -2107,7 +2109,7 @@ function ncSetSM(mode,btn){
   document.getElementById('nc-spDlmF').style.display=mode==='delim'?'':'none';
 }
 function ncRunSplit(){
-  const text=document.getElementById('nc-srcEditor').value;if(!text.trim()){alert('テキストを入力してください');return;}
+  const text=document.getElementById('nc-srcEditor').value;if(!text.trim()){showToast('エディタにテキストを貼り付けてください');return;}
   let parts=[];
   if(ncSplitMode==='chars'){
     const maxChars=parseInt(document.getElementById('nc-spChr').value)||1500;
@@ -2115,7 +2117,7 @@ function ncRunSplit(){
     paragraphs.forEach(p=>{if(!p.trim()) return;if(current&&(current+'\n\n'+p).replace(/[\n\r\s　]/g,'').length>maxChars){parts.push(current);current=p;}else{current=current?current+'\n\n'+p:p;}});
     if(current) parts.push(current);
   } else if(ncSplitMode==='delim'){
-    const delim=document.getElementById('nc-spDlm').value;if(!delim){alert('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.trim()).filter(Boolean);
+    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.trim()).filter(Boolean);
   } else {
     const n=parseInt(document.getElementById('nc-spCnt').value)||2;const lines=text.split('\n');const perPart=Math.ceil(lines.length/n);
     for(let i=0;i<n;i++){const chunk=lines.slice(i*perPart,(i+1)*perPart);if(chunk.some(l=>l.trim()))parts.push(chunk.join('\n'));}
@@ -2192,7 +2194,7 @@ ${text}`;
   navigator.clipboard.writeText(prompt).then(()=>{
     const el=document.getElementById('chk-copy-result');
     el.style.display='flex';
-    setTimeout(()=>{el.style.display='none';},4000);
+    setTimeout(()=>{el.style.display='none';},3000);
   }).catch(()=>{showToast('コピーに失敗しました');});
 }
 
