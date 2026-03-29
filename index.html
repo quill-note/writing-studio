@@ -1256,7 +1256,7 @@ let viewingWorkId=null;
 let editingWorkId=null;
 let currentWorkGenres=[];
 let currentWorkPlatforms=[];
-const DEFAULT_PLATFORMS=['pixiv','ノベマ','小説家になろう','カクヨム','エブリスタ','アルファポリス','Nolaノベル'];
+const DEFAULT_PLATFORMS=['pixiv','ノベマ！','小説家になろう','カクヨム','エブリスタ','アルファポリス','Nolaノベル'];
 
 function renderWorks() {
   const search=document.getElementById('works-search').value.toLowerCase().trim();
@@ -1858,6 +1858,9 @@ function showSuggestions(type){
     const names=[...new Set(worksData.map(w=>w.name).filter(Boolean))];names.forEach(n=>{if(n.toLowerCase().includes(q))candidates.push({text:n,label:'作品'});});
     const genres=[...new Set(worksData.flatMap(w=>w.genres||[]))];genres.forEach(g=>{if(g.toLowerCase().includes(q))candidates.push({text:g,label:'ジャンル'});});
     const sites=[...new Set(worksData.flatMap(w=>w.platforms||[]))];sites.forEach(s=>{if(s.toLowerCase().includes(q))candidates.push({text:s,label:'サイト'});});
+    const statuses=[...new Set(worksData.map(w=>w.status).filter(Boolean))];statuses.forEach(s=>{if(s.toLowerCase().includes(q))candidates.push({text:s,label:'執筆状態'});});
+    const publishes=[...new Set(worksData.map(w=>w.publish).filter(Boolean))];publishes.forEach(p=>{if(p.toLowerCase().includes(q))candidates.push({text:p,label:'公開状態'});});
+    const lengths=[...new Set(worksData.map(w=>w.length).filter(Boolean))];lengths.forEach(l=>{if(l.toLowerCase().includes(q))candidates.push({text:l,label:'種別'});});
   }
   if(type==='char'){
     const names=[...new Set(characters.map(c=>c.name).filter(Boolean))];names.forEach(n=>{if(n.toLowerCase().includes(q))candidates.push({text:n,label:'名前'});});
