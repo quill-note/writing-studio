@@ -1982,9 +1982,76 @@ function ncFormatDirect(){
   const src=document.getElementById('nc-srcEditor').value;
   if(!src.trim()){showToast('エディタにテキストを貼り付けてください');return;}
   const out=ncFmtT(src);
+  // 変更なしの場合
+  if(src===out){ncToast('変更箇所はありませんでした');return;}
   _ncFmtHistory.push(src);document.getElementById('nc-undoBtn').style.display='';
   document.getElementById('nc-srcEditor').value=out;ncUpCt();
-  ncToast('体裁を整えました');document.getElementById('nc-fmtResultPanel').style.display='none';
+  // 変更点を表示
+  const changes=ncShowFmtDiff(src,out);
+  ncRenderFmtResult(changes);
+  ncToast('体裁を整えました');
+}
+
+function ncShowFmtDiff(before,after){
+  const bLines=before.split('\n'),aLines=after.split('\n');
+  const changes=[];
+  const maxLen=Math.max(bLines.length,aLines.length);
+  for(let i=0;i<maxLen;i++){
+    const bl=bLines[i]??'',al=aLines[i]??'';
+    if(bl!==al)changes.push({line:i+1,before:bl,after:al,labels:ncDetectLabels(bl,al)});
+  }
+  return changes;
+}
+
+function ncDetectLabels(before,after){
+  const labels=[];
+  if(!before.startsWith('　')&&after.startsWith('　'))labels.push('字下げ追加');
+  if(before.trim()===''&&after.trim()!=='')labels.push('空行追加');
+  if(before.trim()!==''&&after.trim()==='')labels.push('空行削除');
+  if(/。[」』）]/.test(before)&&!/。[」』）]/.test(after))labels.push('句点削除');
+  if(/[!?]/.test(before)&&!/[!?]/.test(after)&&/[！？]/.test(after))labels.push('記号全角化');
+  if(/[！？]/.test(before)&&!/[！？]/.test(after)&&/[!?]/.test(after))labels.push('記号半角化');
+  if(/[0-9]/.test(before)&&!/[0-9]/.test(after))labels.push('数字全角化');
+  if(/[０-９]/.test(before)&&!/[０-９]/.test(after))labels.push('数字半角化');
+  if(/[A-Za-z]/.test(before)&&!/[A-Za-z]/.test(after))labels.push('英字全角化');
+  if(/[Ａ-Ｚａ-ｚ]/.test(before)&&!/[Ａ-Ｚａ-ｚ]/.test(after))labels.push('英字半角化');
+  if((/…/.test(before)||/\.{3}/.test(before))&&/……/.test(after))labels.push('リーダー統一');
+  if(/—/.test(before)&&/——/.test(after))labels.push('ダッシュ統一');
+  if(!before.includes('《')&&after.includes('《'))labels.push('ルビ追加');
+  const stripIndent=s=>s.startsWith('　')?s.slice(1):s;
+  const spBefore=(stripIndent(before).match(/[ 　]/g)||[]).length;
+  const spAfter=(stripIndent(after).match(/[ 　]/g)||[]).length;
+  if(spBefore>spAfter)labels.push('スペース削除');
+  if(spBefore<spAfter)labels.push('スペース追加');
+  ['」','』','》'].forEach(c=>{
+    const bc=(before.match(new RegExp(c,'g'))||[]).length;
+    const ac=(after.match(new RegExp(c,'g'))||[]).length;
+    if(ac>bc)labels.push(c+'追加');
+  });
+  if(!labels.length)labels.push('書式変更');
+  return labels;
+}
+
+function ncRenderFmtResult(changes){
+  const panel=document.getElementById('nc-fmtResultPanel');
+  const list=document.getElementById('nc-fmtResultList');
+  if(!changes.length){panel.style.display='none';return;}
+  const badges=document.getElementById('nc-fmtResultBadges');
+  // ラベル集計
+  const labelCount={};
+  changes.forEach(c=>c.labels.forEach(l=>{labelCount[l]=(labelCount[l]||0)+1;}));
+  badges.innerHTML=Object.entries(labelCount).map(([l,n])=>`<span class="proof-badge gobi">${l} ${n}件</span>`).join('');
+  list.innerHTML=changes.slice(0,20).map((c,i)=>`
+    <div class="proof-item" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text3)">行 ${c.line}</span>
+        ${c.labels.map(l=>`<span style="font-size:10px;background:var(--primary-pale);color:var(--primary-dark);padding:1px 6px;border-radius:6px">${l}</span>`).join('')}
+      </div>
+      ${c.before!==''?`<div style="font-size:12px;font-family:var(--font-mincho);color:var(--text3);background:var(--surface2);padding:3px 8px;border-radius:6px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through">${esc(c.before)}</div>`:''}
+      <div style="font-size:12px;font-family:var(--font-mincho);color:var(--text);background:var(--surface);padding:3px 8px;border-radius:6px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:2px solid var(--success)">${esc(c.after)||'（空行追加）'}</div>
+    </div>`).join('');
+  if(changes.length>20)list.innerHTML+=`<div style="font-size:12px;color:var(--text3);padding:8px 0">他 ${changes.length-20} 箇所...</div>`;
+  panel.style.display='block';
 }
 function ncUndoFormat(){
   if(!_ncFmtHistory.length) return;
