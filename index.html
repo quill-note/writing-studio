@@ -185,10 +185,14 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .select-item:last-child { border-bottom: none; }
 .select-item:hover, .select-item:active, .select-item.keyboard-focus { background: var(--primary-pale); }
 .select-item.add-new { color: var(--primary); font-weight: 600; }
-.stat-bar { display: flex; gap: 12px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
-.stat-item { text-align: center; flex: 1; }
-.stat-num { font-size: 20px; font-weight: 700; color: var(--primary); }
-.stat-label { font-size: 10px; color: var(--text3); }
+.stat-bar {
+  display: flex; gap: 16px; padding: 6px 16px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: var(--header-h, 80px); z-index: 90;
+  align-items: center; flex-wrap: wrap;
+}
+.stat-mini-num { font-size: 13px; font-weight: 700; color: var(--primary); }
+.stat-mini-label { font-size: 10px; color: var(--text3); }
 
 /* ========== 執筆補助タブ ========== */
 .writing-page { padding: 0 0 20px; }
@@ -419,7 +423,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     </div>
   </div>
   <div id="works-stat" class="stat-bar" style="display:none"></div>
-  <div class="card-list" id="works-list"></div>
+    <div class="card-list" id="works-list"></div>
 </div>
 
 <!-- ========== 作品詳細ビュー ========== -->
@@ -457,7 +461,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     </div>
   </div>
   <div id="char-stat" class="stat-bar" style="display:none"></div>
-  <div class="card-list" id="char-list"></div>
+    <div class="card-list" id="char-list"></div>
 </div>
 
 <!-- ========== コンテストページ ========== -->
@@ -482,7 +486,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
   </div>
   <div class="tag-filter-wrap" id="contest-tag-filter"></div>
   <div id="contest-stat" class="stat-bar" style="display:none"></div>
-  <div class="card-list" id="contest-list"></div>
+    <div class="card-list" id="contest-list"></div>
 </div>
 
 <!-- ========== バックアップページ ========== -->
@@ -832,6 +836,10 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
         </div>
         <button onclick="addContestTagByBtn()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:12px;white-space:nowrap">追加</button>
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">締切日</label>
+      <input type="date" class="form-input" id="fc-deadline">
     </div>
     <div class="form-group">
       <label class="form-label">URL</label>
@@ -1266,11 +1274,20 @@ function renderWorks() {
     const haystack=[w.name,...(w.genres||[]),w.publish,w.status,w.length,...(w.platforms||[]),w.synopsis,w.worldview,w.memo].filter(Boolean).join(' ').toLowerCase();
     return searchTerms.every(t=>haystack.includes(t));
   });
-  list=[...list].sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+  list=[...list].sort((a,b)=>{
+    const da=a.deadline?new Date(a.deadline):null;
+    const db=b.deadline?new Date(b.deadline):null;
+    if(da&&db)return da-db;
+    if(da)return -1;
+    if(db)return 1;
+    return new Date(b.updatedAt||0)-new Date(a.updatedAt||0);
+  });
   const statEl=document.getElementById('works-stat');
   if(worksData.length>0){
     statEl.style.display='flex';
-    statEl.innerHTML=`<div class="stat-item"><div class="stat-num">${worksData.length}</div><div class="stat-label">作品数</div></div><div class="stat-item"><div class="stat-num">${worksData.filter(w=>w.status==='執筆中').length}</div><div class="stat-label">執筆中</div></div><div class="stat-item"><div class="stat-num">${worksData.filter(w=>w.status==='完結').length}</div><div class="stat-label">完結</div></div>`;
+    const wLen=worksData.length,wW=worksData.filter(w=>w.status==='執筆中').length,wC=worksData.filter(w=>w.status==='完結').length;
+    statEl.innerHTML=`<span class="stat-mini-label">作品数：</span><span class="stat-mini-num">${wLen}</span><span class="stat-mini-label">　執筆中：</span><span class="stat-mini-num">${wW}</span><span class="stat-mini-label">　完結：</span><span class="stat-mini-num">${wC}</span>`;
+    const wm=document.getElementById('works-mini-num');if(wm)wm.textContent=wLen+'作品';
   } else { statEl.style.display='none'; }
   const el=document.getElementById('works-list');
   if(list.length===0){el.innerHTML=`<div class="empty-state"><div class="icon mi" style="font-size:48px">auto_stories</div><p>${search?'作品が見つかりません':'作品を追加してみましょう'}</p></div>`;return;}
@@ -1411,7 +1428,9 @@ function renderCharacters(){
   const statEl=document.getElementById('char-stat');
   if(characters.length>0){
     statEl.style.display='flex';
-    statEl.innerHTML=`<div class="stat-item"><div class="stat-num">${characters.length}</div><div class="stat-label">総数</div></div><div class="stat-item"><div class="stat-num">${[...new Set(characters.map(c=>c.work).filter(Boolean))].length}</div><div class="stat-label">作品数</div></div>`;
+    const cLen=characters.length,cW=[...new Set(characters.map(c=>c.work).filter(Boolean))].length;
+    statEl.innerHTML=`<span class="stat-mini-label">総数：</span><span class="stat-mini-num">${cLen}</span><span class="stat-mini-label">　作品数：</span><span class="stat-mini-num">${cW}</span>`;
+    const cm=document.getElementById('char-mini-num');if(cm)cm.textContent=cLen+'人';
   } else {statEl.style.display='none';}
   const el=document.getElementById('char-list');
   if(list.length===0){el.innerHTML=`<div class="empty-state"><div class="icon mi" style="font-size:48px">person_outline</div><p>キャラクターが見つかりません</p></div>`;return;}
@@ -1560,7 +1579,14 @@ function renderContests(){
     const matchTag=!contestActiveTag.length||contestActiveTag.every(t=>(c.tags||[]).includes(t));
     return matchSearch&&matchTag;
   });
-  list=[...list].sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+  list=[...list].sort((a,b)=>{
+    const da=a.deadline?new Date(a.deadline):null;
+    const db=b.deadline?new Date(b.deadline):null;
+    if(da&&db)return da-db;
+    if(da)return -1;
+    if(db)return 1;
+    return new Date(b.updatedAt||0)-new Date(a.updatedAt||0);
+  });
   const allTags=[...new Set(contests.flatMap(c=>c.tags||[]))];
   const filterEl=document.getElementById('contest-tag-filter');
   let fHtml=`<span class="tag-chip ${!contestActiveTag.length?'active':''}" onclick="contestActiveTag=[];renderContests()">すべて</span>`;
@@ -1572,7 +1598,8 @@ function renderContests(){
     const submitted=contests.filter(c=>c.status&&c.status!=='').length;
     const won=contests.filter(c=>c.status==='受賞').length;
     const finalist=contests.filter(c=>['最終','二次','一次','受賞'].includes(c.status)).length;
-    statEl.innerHTML=`<div class="stat-item"><div class="stat-num">${contests.length}</div><div class="stat-label">合計</div></div><div class="stat-item"><div class="stat-num">${finalist}</div><div class="stat-label">通過実績</div></div><div class="stat-item"><div class="stat-num">${won}</div><div class="stat-label">受賞</div></div>`;
+    statEl.innerHTML=`<span class="stat-chip"><span class="mi">emoji_events</span>${contests.length}件</span><span class="stat-chip"><span class="mi">trending_up</span>通過 ${finalist}</span><span class="stat-chip"><span class="mi">star</span>受賞 ${won}</span><button class="stat-toggle-btn" onclick="toggleStat('contest')"><span class="mi">expand_less</span></button>`;
+    const ctm=document.getElementById('contest-mini-num');if(ctm)ctm.textContent=contests.length+'件';
   } else {statEl.style.display='none';}
   const el=document.getElementById('contest-list');
   if(list.length===0){el.innerHTML=`<div class="empty-state"><div class="icon mi" style="font-size:48px">emoji_events</div><p>コンテストが見つかりません</p></div>`;return;}
@@ -1583,7 +1610,7 @@ function renderContests(){
       ${c.status?`<span class="badge" style="background:${statusColor[c.status]||'#9e9e9e'}22;color:${statusColor[c.status]||'#9e9e9e'}">${esc(c.status)}</span>`:''}
     </div>
     ${c.work?`<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>`:''}
-    ${c.resultPeriod?`<div style="font-size:12px;color:var(--text3)">結果: ${esc(c.resultPeriod)}</div>`:''}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:2px">${c.deadline?deadlineBadge(c.deadline):''}${c.resultPeriod?`<span style="font-size:11px;color:var(--text3)">結果: ${esc(c.resultPeriod)}</span>`:''}</div>
     ${(c.tags||[]).length?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">${c.tags.join('　')}</div>`:''}
     ${(c.platforms||[]).length?`<div style="margin-top:4px;font-size:12px;color:var(--text3)">${c.platforms.join('　')}</div>`:''}
   </div>`).join('');
@@ -1607,7 +1634,7 @@ function addContestCustomPlatform(){
 function openAddContestModal(){
   editingContestId=null;currentContestTags=[];currentContestPlatforms=[];
   document.getElementById('contest-modal-title').textContent='コンテスト追加';
-  ['fc-name','fc-url','fc-result-period','fc-memo'].forEach(id=>document.getElementById(id).value='');
+  ['fc-name','fc-url','fc-deadline','fc-result-period','fc-memo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fc-status').value='';
   document.getElementById('contest-delete-btn').style.display='none';
   renderTagArea('contest-tag-area',currentContestTags,'fc-tag-input');
@@ -1621,7 +1648,7 @@ function openEditContestModal(id){
   editingContestId=id;currentContestTags=[...(c.tags||[])];currentContestPlatforms=[...(c.platforms||[])];
   document.getElementById('contest-modal-title').textContent='コンテスト編集';
   document.getElementById('fc-name').value=c.name||'';document.getElementById('fc-url').value=c.url||'';
-  document.getElementById('fc-result-period').value=c.resultPeriod||'';document.getElementById('fc-status').value=c.status||'';document.getElementById('fc-memo').value=c.memo||'';
+  document.getElementById('fc-deadline').value=c.deadline||'';document.getElementById('fc-result-period').value=c.resultPeriod||'';document.getElementById('fc-status').value=c.status||'';document.getElementById('fc-memo').value=c.memo||'';
   document.getElementById('contest-delete-btn').style.display='block';
   renderTagArea('contest-tag-area',currentContestTags,'fc-tag-input');renderContestPlatformSelect(c.platforms||[]);
   document.getElementById('fc-work-input').value=c.work||'';document.getElementById('fc-work').value=c.work||'';
@@ -1631,7 +1658,7 @@ function openEditContestModal(id){
 function saveContest(){
   const name=document.getElementById('fc-name').value.trim();if(!name){showToast('コンテスト名を入力してください');return;}
   const work=getWorkFromForm(null,'fc-work');if(work) addWorkTitle(work);
-  const data={id:editingContestId||Date.now(),name,work,url:document.getElementById('fc-url').value.trim(),resultPeriod:document.getElementById('fc-result-period').value.trim(),status:document.getElementById('fc-status').value,platforms:[...currentContestPlatforms],tags:[...currentContestTags],memo:document.getElementById('fc-memo').value.trim(),updatedAt:new Date().toISOString()};
+  const data={id:editingContestId||Date.now(),name,work,url:document.getElementById('fc-url').value.trim(),deadline:document.getElementById('fc-deadline').value,resultPeriod:document.getElementById('fc-result-period').value.trim(),status:document.getElementById('fc-status').value,platforms:[...currentContestPlatforms],tags:[...currentContestTags],memo:document.getElementById('fc-memo').value.trim(),updatedAt:new Date().toISOString()};
   if(editingContestId){const idx=contests.findIndex(c=>c.id===editingContestId);if(idx>=0)contests[idx]=data;}else{contests.push(data);}
   saveData('contests',contests);closeModal('contest-modal');renderContests();
 }
@@ -2037,20 +2064,28 @@ function ncRenderFmtResult(changes){
   const list=document.getElementById('nc-fmtResultList');
   if(!changes.length){panel.style.display='none';return;}
   const badges=document.getElementById('nc-fmtResultBadges');
-  // ラベル集計
-  const labelCount={};
-  changes.forEach(c=>c.labels.forEach(l=>{labelCount[l]=(labelCount[l]||0)+1;}));
-  badges.innerHTML=Object.entries(labelCount).map(([l,n])=>`<span class="proof-badge gobi">${l} ${n}件</span>`).join('');
-  list.innerHTML=changes.slice(0,20).map((c,i)=>`
-    <div class="proof-item" style="flex-direction:column;align-items:flex-start;gap:4px">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--text3)">行 ${c.line}</span>
-        ${c.labels.map(l=>`<span style="font-size:10px;background:var(--primary-pale);color:var(--primary-dark);padding:1px 6px;border-radius:6px">${l}</span>`).join('')}
-      </div>
-      ${c.before!==''?`<div style="font-size:12px;font-family:var(--font-mincho);color:var(--text3);background:var(--surface2);padding:3px 8px;border-radius:6px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through">${esc(c.before)}</div>`:''}
-      <div style="font-size:12px;font-family:var(--font-mincho);color:var(--text);background:var(--surface);padding:3px 8px;border-radius:6px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:2px solid var(--success)">${esc(c.after)||'（空行追加）'}</div>
-    </div>`).join('');
-  if(changes.length>20)list.innerHTML+=`<div style="font-size:12px;color:var(--text3);padding:8px 0">他 ${changes.length-20} 箇所...</div>`;
+  // ラベルでグループ化
+  const groups=[];
+  changes.forEach(function(item,i){
+    const key=item.labels.join('・');
+    const existing=groups.find(function(g){return g.key===key;});
+    if(existing){existing.items.push(Object.assign({},item,{idx:i}));}
+    else{groups.push({key,labels:item.labels,items:[Object.assign({},item,{idx:i})]});}
+  });
+  let bh='<span class="proof-badge gobi">変更 '+changes.length+'件</span>';
+  badges.innerHTML=bh;
+  list.innerHTML=groups.map(function(g){
+    const labelHtml='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">'+esc(g.labels.join('・'))+'</div>';
+    const snippets=g.items.map(function(item){
+      const bDisp=item.before===''?'（空行）':esc(item.before.slice(0,60))+(item.before.length>60?'…':'');
+      const aDisp=item.after===''?'（空行）':esc(item.after.slice(0,60))+(item.after.length>60?'…':'');
+      return '<div style="cursor:pointer;margin-bottom:4px">'
+        +'<div class="proof-snippet" style="color:var(--text3);margin-bottom:2px;text-decoration:line-through">'+bDisp+'</div>'
+        +'<div class="proof-snippet" style="color:var(--primary-dark);font-weight:600;border-color:var(--primary-light)">'+aDisp+'</div>'
+        +'</div>';
+    }).join('');
+    return '<div class="proof-item" style="flex-direction:column;align-items:flex-start;gap:2px;padding:8px 0;cursor:default">'+labelHtml+snippets+'</div>';
+  }).join('');
   panel.style.display='block';
 }
 function ncUndoFormat(){
@@ -2093,7 +2128,8 @@ function ncTog(id){document.getElementById('nc-'+id+'Toggle').classList.toggle('
 
 // 推敲チェック
 function ncRunProof(){
-  const text=ncFmtT(document.getElementById('nc-srcEditor').value)||document.getElementById('nc-srcEditor').value;
+  ncFmt=ncFmtT(document.getElementById('nc-srcEditor').value);
+  const text=ncFmt||document.getElementById('nc-srcEditor').value;
   if(!text.trim()){showToast('エディタにテキストを貼り付けてください');return;}
   ncIssues=[];ncIgnored=new Set();
   const sens=+document.getElementById('nc-gobiSens').value;
@@ -2129,39 +2165,273 @@ function ncRunProof(){
   });
   ncRenderProof();
 }
-function ncIsIg(issue){const k=issue.type+(issue.type==='gobi'?issue.ending:issue.type==='yure'?issue.wordA+issue.wordB:issue.word||'');return ncIgnored.has(k);}
-function ncIgnoreIssue(issue){const k=issue.type+(issue.type==='gobi'?issue.ending:issue.type==='yure'?issue.wordA+issue.wordB:issue.word||'');ncIgnored.add(k);ncRenderProof();}
-function ncResetIg(){ncIgnored=new Set();ncRenderProof();}
-function ncClearProof(){ncIssues=[];ncIgnored=new Set();document.getElementById('nc-proofSum').style.display='none';document.getElementById('nc-proofText').style.display='none';document.getElementById('nc-proofPlaceholder').style.display='block';}
+function ncIsIg(is){return ncIgnored.has(is.type+'|'+(is.wordA||is.word||is.ending||''));}
+function ncIgnoreIssue(i){
+  const is=ncIssues[i];
+  const key=is.type+'|'+(is.wordA||is.word||is.ending||'');
+  if(ncIgnored.has(key)){ncIgnored.delete(key);ncToast('復元しました');}
+  else{ncIgnored.add(key);ncToast('無視しました');}
+  ncRenderProof();
+}
+function ncResetIg(){ncIgnored=new Set();ncRenderProof();ncToast('リセットしました');}
+function ncClearProof(){
+  const s=document.getElementById('nc-proofSum'),t=document.getElementById('nc-proofText'),ph=document.getElementById('nc-proofPlaceholder');
+  if(s){s.style.display='none';s.innerHTML='';}if(t){t.style.display='none';t.innerHTML='';}if(ph)ph.style.display='block';
+  ncIssues=[];ncIgnored=new Set();ncToast('チェック結果をクリアしました');
+}
 function ncRenderProof(){
   const sum=document.getElementById('nc-proofSum'),tEl=document.getElementById('nc-proofText');
-  const ph=document.getElementById('nc-proofPlaceholder');if(ph) ph.style.display='none';
-  const active=ncIssues.filter(i=>!ncIsIg(i));
-  if(!active.length){sum.style.display='block';sum.innerHTML='<p style="color:var(--success);font-weight:500;display:flex;align-items:center;gap:6px"><span class="mi mi-sm">check_circle</span>問題なし！</p>';tEl.style.display='none';return;}
+  const ph=document.getElementById('nc-proofPlaceholder');if(ph)ph.style.display='none';
+  const text=ncFmt||document.getElementById('nc-srcEditor').value;
+  if(!ncIssues.length){sum.style.display='block';sum.innerHTML='<p style="color:var(--success);font-weight:500;display:flex;align-items:center;gap:6px"><span class="mi mi-sm">check_circle</span>問題なし！</p>';tEl.style.display='none';return;}
   const gobiCt=ncIssues.filter(i=>i.type==='gobi'&&!ncIsIg(i)).length;
   const yureCt=ncIssues.filter(i=>i.type==='yure'&&!ncIsIg(i)).length;
   const ngCt=ncIssues.filter(i=>i.type==='ng'&&!ncIsIg(i)).length;
   let h='<div class="proof-badges">';
-  if(gobiCt) h+=`<span class="proof-badge gobi">語尾 ${gobiCt}件</span>`;
-  if(yureCt) h+=`<span class="proof-badge yure">表記ゆれ ${yureCt}件</span>`;
-  if(ngCt) h+=`<span class="proof-badge ng">NG ${ngCt}件</span>`;
+  if(gobiCt)h+='<span class="proof-badge gobi">語尾 '+gobiCt+'件</span>';
+  if(yureCt)h+='<span class="proof-badge yure">表記ゆれ '+yureCt+'件</span>';
+  if(ngCt)h+='<span class="proof-badge ng">NG '+ngCt+'件</span>';
   h+='</div>';
-  h+=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-secondary btn-sm" onclick="ncResetIg()"><span class="mi mi-xs">refresh</span>無視リセット</button></div>`;
-  h+=ncIssues.map((issue,idx)=>{
-    const ignored=ncIsIg(issue);
-    let body=`<span class="proof-tag ${issue.type}">${{gobi:'語尾',yure:'表記ゆれ',ng:'NG',bracket:'括弧'}[issue.type]||issue.type}</span>`;
-    body+=`<div class="proof-item-body"><div>${esc(issue.message)}</div>`;
-    if(issue.type==='gobi'&&issue.snippets){body+=`<div class="proof-snippets">${issue.snippets.map(s=>`<div class="proof-snippet">…${esc(s)}…</div>`).join('')}</div>`;}
-    if(issue.type==='yure'){
-      body+=`<div class="proof-snippets">${[...(issue.snippetsA||[]).slice(0,2),...(issue.snippetsB||[]).slice(0,2)].map(s=>`<div class="proof-snippet" onclick="ncYureSnipClick(this,'${esc(s.ctx).replace(/'/g,"\\'")}','${esc(s.word).replace(/'/g,"\\'")}',${s.pos})">${s.ctx.replace(/【(.+?)】/g,(m,w)=>'<mark>'+eH(w)+'</mark>')}</div>`).join('')}</div>`;
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-secondary btn-sm" onclick="ncResetIg()"><span class="mi mi-xs">refresh</span>無視リセット</button></div>';
+  ncIssues.forEach(function(is,i){
+    const ig=ncIsIg(is);
+    const hasSnips=!ig&&(
+      (is.type==='yure'&&(is.snippetsA||is.snippetsB))||
+      (is.type==='ng'&&is.pairSnips&&is.pairSnips.length)||
+      (is.type==='gobi'&&((is.snippetTexts&&is.snippetTexts.length)||(is.snippets&&is.snippets.length)))
+    );
+    const clickAct=hasSnips?'ncTogSnip('+i+')':'';
+    h+='<div class="proof-item'+(ig?' ignored':'')+'" id="nc-pi-'+i+'" onclick="'+clickAct+'" style="flex-wrap:wrap;cursor:'+(ig?'default':'pointer')+'">';
+    h+='<span class="proof-tag '+is.type+'">'+(({'gobi':'語尾','yure':'表記ゆれ','ng':'NG'})[is.type]||is.type)+'</span>';
+    h+='<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(is.message)+'</span>';
+    h+='<span class="proof-actions">';
+    if(hasSnips)h+='<span class="mi" id="nc-pi-chev-'+i+'" style="font-size:16px;color:var(--text3);transition:transform .2s">expand_more</span>';
+    h+='<button class="btn-icon" title="'+(ig?'復元':'無視')+'" onclick="event.stopPropagation();ncIgnoreIssue('+i+')"><span class="mi" style="font-size:14px">'+(ig?'visibility':'visibility_off')+'</span></button>';
+    h+='</span>';
+    if(hasSnips){
+      h+='<div class="proof-snippets" id="nc-pi-snip-'+i+'" style="width:100%;display:none">';
+      if(is.type==='gobi'){
+        const texts=is.snippetTexts&&is.snippetTexts.length?is.snippetTexts:is.snippets||[];
+        texts.forEach(function(st,si){
+          const enc=eH(st);
+          const marked=enc.replace(new RegExp(eH(is.ending)+'$'),'<mark>'+eH(is.ending)+'</mark>');
+          h+='<div class="proof-snippet" data-snip="'+eH(st)+'" data-di="'+i+'" onclick="event.stopPropagation();ncGobiSnipPopEl(event,this)" title="タップして編集">'+marked+'</div>';
+        });
+      }else if(is.type==='yure'){
+        [...(is.snippetsA||[]),...(is.snippetsB||[])].forEach(function(s){
+          const ctx=eH(s.ctx).replace('【'+eH(s.word)+'】','<mark>'+eH(s.word)+'</mark>');
+          h+='<div class="proof-snippet" onclick="event.stopPropagation();ncSnipEditPop(event,this,\''+eH(s.word)+'\','+s.pos+','+i+')" title="タップして編集">...'+ctx+'...</div>';
+        });
+      }else if(is.type==='ng'){
+        const shownPos=new Set();
+        is.pairSnips.forEach(function(ps){
+          const cF=eH(ps.ctxFrom).replace('【'+eH(is.word)+'】','<mark>'+eH(is.word)+'</mark>');
+          const cT=eH(ps.ctxTo).replace('【'+eH(is.word)+'】','<mark>'+eH(is.word)+'</mark>');
+          if(!shownPos.has(ps.from)){shownPos.add(ps.from);h+='<div class="proof-snippet ng-snip" onclick="event.stopPropagation();ncSnipEditPop(event,this,\''+eH(is.word)+'\','+ps.from+','+i+')" title="タップして編集">...'+cF+'...</div>';}
+          if(!shownPos.has(ps.to)){shownPos.add(ps.to);h+='<div class="proof-snippet ng-snip" onclick="event.stopPropagation();ncSnipEditPop(event,this,\''+eH(is.word)+'\','+ps.to+','+i+')" title="タップして編集（'+ps.dist+'字後）">↳ '+ps.dist+'字後　...'+cT+'...</div>';}
+        });
+      }
+      h+='</div>';
     }
-    if(issue.type==='ng'&&issue.pairSnips){body+=`<div class="proof-snippets">${issue.pairSnips.slice(0,3).map(p=>`<div class="proof-snippet ng-snip">${esc(p.ctxFrom).replace(/【(.+?)】/g,(m,w)=>'<mark>'+eH(w)+'</mark>')} <span style="color:var(--text3)">→ ${p.dist}字後</span></div>`).join('')}</div>`;}
-    body+='</div>';
-    return `<div class="proof-item${ignored?' ignored':''}" onclick="if(event.target.closest('.proof-snippet')||event.target.closest('button'))return">${body}<div class="proof-actions"><button class="btn-icon" title="無視" onclick="ncIgnoreIssue(ncIssues[${idx}])"><span class="mi mi-sm" style="color:var(--text3)">visibility_off</span></button></div></div>`;
-  }).join('');
-  sum.style.display='block';sum.innerHTML=h;tEl.style.display='none';
+    h+='</div>';
+  });
+  sum.style.display='block';sum.innerHTML=h;
+  // 本文ハイライト
+  const marks=[];
+  ncIssues.forEach(function(is,i){
+    if(ncIsIg(is))return;
+    if(is.type==='yure'){
+      [is.wordA,is.wordB].forEach(function(w){
+        const alt=w===is.wordA?is.wordB:is.wordA;
+        let idx=0;
+        while((idx=text.indexOf(w,idx))>=0){marks.push({start:idx,end:idx+w.length,cls:'hl-yure',di:i,w:w,alt:alt});idx+=w.length;}
+      });
+    }else if(is.type==='gobi'&&is.snippets){
+      is.snippets.forEach(function(sn){let idx=0;while((idx=text.indexOf(sn,idx))>=0){marks.push({start:idx,end:idx+sn.length,cls:'hl-gobi',di:i});idx+=sn.length;}});
+    }else if(is.type==='ng'&&is.pairs){
+      const hlPos=new Set();
+      is.pairs.forEach(function(p){hlPos.add(p.from);hlPos.add(p.to);});
+      hlPos.forEach(function(idx){marks.push({start:idx,end:idx+is.word.length,cls:'hl-ng',di:i});});
+    }
+  });
+  marks.sort(function(a,b){return a.start-b.start;});
+  let html='',pos=0;
+  marks.forEach(function(m){
+    if(m.start<pos)return;
+    html+=eH(text.slice(pos,m.start));
+    const inner=eH(text.slice(m.start,m.end));
+    if(m.cls==='hl-yure')html+='<span class="hl-yure" data-i="'+m.di+'" data-pos="'+m.start+'" data-w="'+eH(m.w)+'" data-alt="'+eH(m.alt)+'" onclick="ncSPop(event,this)">'+inner+'</span>';
+    else if(m.cls==='hl-gobi')html+='<span class="hl-gobi" data-i="'+m.di+'" data-pos="'+m.start+'" data-w="'+eH(text.slice(m.start,m.end))+'" onclick="ncGPop(event,this)">'+inner+'</span>';
+    else html+='<span class="hl-ng" data-i="'+m.di+'" data-pos="'+m.start+'" data-w="'+eH(text.slice(m.start,m.end))+'" onclick="ncNPop(event,this)">'+inner+'</span>';
+    pos=m.end;
+  });
+  html+=eH(text.slice(pos));
+  tEl.innerHTML=html;tEl.style.display='block';
 }
-function ncYureSnipClick(el,ctx,word,pos){}
+function ncTogSnip(i){
+  const snip=document.getElementById('nc-pi-snip-'+i),chev=document.getElementById('nc-pi-chev-'+i);
+  if(!snip)return;
+  const open=snip.style.display==='none'||!snip.style.display;
+  snip.style.display=open?'flex':'none';
+  if(chev)chev.style.transform=open?'rotate(180deg)':'';
+}
+function ncShowPop(p,el){
+  _ncLastPopEl=el;_ncPopActive=true;
+  p.style.display='block';p.style.left='0';p.style.top='-9999px';
+  requestAnimationFrame(function(){
+    if(!_ncPopActive)return;
+    const r=el.getBoundingClientRect(),pw=p.offsetWidth,ph=p.offsetHeight;
+    let left=pw>=window.innerWidth-16?8:Math.max(8,Math.min(r.left,window.innerWidth-pw-8));
+    let top=r.bottom+8;
+    if(top+ph>window.innerHeight-8)top=Math.max(8,r.top-ph-8);
+    p.style.left=left+'px';p.style.top=top+'px';
+  });
+}
+function ncHPop(){_ncPopActive=false;const p=document.getElementById('nc-yPop');if(p){p.style.display='none';p.style.top='-9999px';}}
+function ncRepW(btn){
+  const from=btn.dataset.from,to=btn.dataset.to;ncHPop();
+  const s=document.getElementById('nc-srcEditor');
+  const newVal=s.value.split(from).join(to);
+  if(newVal!==s.value){s.value=newVal;ncUpCt();ncToast('「'+from+'」→「'+to+'」（全件置換）');ncRunProof();}
+}
+function ncGobiSnipPopEl(e,el){ncGobiSnipPop(e,el,el.dataset.snip||'',el.dataset.di!=null?+el.dataset.di:null);}
+function ncGobiSnipPop(e,el,fmtSentence,di){
+  e.stopPropagation();
+  const p=document.getElementById('nc-yPop');
+  const displaySent=fmtSentence.replace(/^[　\s]+/,'');
+  const ctx=eH(displaySent.slice(-20));
+  let html='<div class="yure-popup-title" style="font-family:var(--font-mincho);font-size:12px;margin-bottom:8px;line-height:1.8">...'+ctx+'</div>';
+  html+='<div style="font-size:10px;color:var(--text3);margin-bottom:3px">文ごと書き換え：</div>'
+    +'<textarea id="nc-snipSentVal" style="width:100%;font-family:var(--font-mincho);font-size:12px;line-height:1.7;padding:6px 8px;border:1px solid var(--border);border-radius:8px;resize:vertical;min-height:64px;margin-bottom:6px;color:var(--text)">'+eH(displaySent)+'</textarea>'
+    +'<button class="btn btn-primary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncSnipSentEditGobi(event)"><span class="mi mi-xs">edit</span>この文を書き換え</button>';
+  if(di!=null)html+='<button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncHPop();ncTogSnip('+di+')"><span class="mi mi-xs">arrow_downward</span>該当箇所へ</button>';
+  html+='<button class="btn btn-secondary btn-sm" style="width:100%" onclick="ncHPop()"><span class="mi mi-xs">check</span>閉じる</button>';
+  p.innerHTML=html;
+  document.getElementById('nc-snipSentVal').dataset.orig=displaySent;
+  ncShowPop(p,el);
+  setTimeout(function(){const ta=document.getElementById('nc-snipSentVal');if(ta)ta.focus();},80);
+}
+function ncGPop(e,el){
+  e.stopPropagation();
+  const pos=+el.dataset.pos,word=el.dataset.w||el.textContent;
+  const p=document.getElementById('nc-yPop');
+  const fmtText=ncFmt||document.getElementById('nc-srcEditor').value;
+  const fBefore=fmtText.slice(Math.max(0,pos-60),pos),fAfter=fmtText.slice(pos+word.length,pos+word.length+60);
+  const fSentStart=Math.max(fBefore.lastIndexOf('。'),fBefore.lastIndexOf('\n'))+1;
+  const fSentEnd=fAfter.search(/[。\n]/);
+  const fmtSentence=fBefore.slice(fSentStart)+word+(fSentEnd>=0?fAfter.slice(0,fSentEnd+1):fAfter);
+  const displaySent=fmtSentence.replace(/^[　\s]+/,'');
+  const ctx='...'+eH(fmtText.slice(Math.max(0,pos-12),pos))+'<mark>'+eH(word)+'</mark>'+eH(fmtText.slice(pos+word.length,pos+word.length+12))+'...';
+  let html='<div class="yure-popup-title" style="font-family:var(--font-mincho);font-size:12px;margin-bottom:8px;line-height:1.8">'+ctx+'</div>';
+  html+='<div style="font-size:10px;color:var(--text3);margin-bottom:3px">文ごと書き換え：</div>'
+    +'<textarea id="nc-snipSentVal" style="width:100%;font-family:var(--font-mincho);font-size:12px;line-height:1.7;padding:6px 8px;border:1px solid var(--border);border-radius:8px;resize:vertical;min-height:64px;margin-bottom:6px;color:var(--text)">'+eH(displaySent)+'</textarea>'
+    +'<button class="btn btn-primary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncSnipSentEditGobi(event)"><span class="mi mi-xs">edit</span>この文を書き換え</button>'
+    +'<button class="btn btn-secondary btn-sm" style="width:100%" onclick="ncHPop()"><span class="mi mi-xs">check</span>閉じる</button>';
+  p.innerHTML=html;
+  document.getElementById('nc-snipSentVal').dataset.orig=displaySent;
+  ncShowPop(p,el);
+  setTimeout(function(){const ta=document.getElementById('nc-snipSentVal');if(ta)ta.focus();},80);
+}
+function ncNPop(e,el){ncGPop(e,el);}
+function ncSPop(e,el){
+  e.stopPropagation();
+  const pos=+el.dataset.pos,word=el.dataset.w||el.textContent,alt=el.dataset.alt||'';
+  const p=document.getElementById('nc-yPop');
+  const fmtText=ncFmt||document.getElementById('nc-srcEditor').value;
+  const ctx='...'+eH(fmtText.slice(Math.max(0,pos-12),pos))+'<mark>'+eH(word)+'</mark>'+eH(fmtText.slice(pos+word.length,pos+word.length+12))+'...';
+  let html='<div class="yure-popup-title" style="font-family:var(--font-mincho);font-size:12px;margin-bottom:8px;line-height:1.8">'+ctx+'</div>';
+  html+='<div style="margin-bottom:6px">'
+    +'<input class="input-text" id="nc-snipEditVal" value="'+eH(word)+'" style="width:100%;font-size:13px;margin-bottom:6px">'
+    +'<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:6px" data-word="'+eH(word)+'" data-pos="'+pos+'" onclick="ncSnipEditFromBtn(event,this)"><span class="mi mi-xs">edit</span>この1箇所を変更</button>'
+    +'</div>';
+  if(alt){
+    html+='<button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncRepW(this)" data-from="'+eH(word)+'" data-to="'+eH(alt)+'"><span class="mi mi-xs">find_replace</span>全件「'+eH(alt)+'」に統一</button>';
+    html+='<button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncRepW(this)" data-from="'+eH(alt)+'" data-to="'+eH(word)+'"><span class="mi mi-xs">find_replace</span>全件「'+eH(word)+'」に統一</button>';
+  }
+  html+='<button class="btn btn-secondary btn-sm" style="width:100%" onclick="ncHPop()"><span class="mi mi-xs">check</span>閉じる</button>';
+  p.innerHTML=html;
+  ncShowPop(p,el);
+  setTimeout(function(){const inp=document.getElementById('nc-snipEditVal');if(inp){inp.focus();inp.select();}},80);
+}
+function ncSnipEditPop(e,el,word,pos,di){
+  e.stopPropagation();
+  const p=document.getElementById('nc-yPop');
+  const fmtText=ncFmt||document.getElementById('nc-srcEditor').value;
+  const is=ncIssues[di];
+  const ctx='...'+eH(fmtText.slice(Math.max(0,pos-12),pos))+'<mark>'+eH(word)+'</mark>'+eH(fmtText.slice(pos+word.length,pos+word.length+12))+'...';
+  let html='<div class="yure-popup-title" style="font-family:var(--font-mincho);font-size:12px;margin-bottom:8px;line-height:1.8">'+ctx+'</div>';
+  html+='<div style="margin-bottom:6px">'
+    +'<input class="input-text" id="nc-snipEditVal" value="'+eH(word)+'" style="width:100%;font-size:13px;margin-bottom:6px">'
+    +'<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" data-word="'+eH(word)+'" data-pos="'+pos+'" data-di="'+di+'" onclick="ncSnipEditFromBtn(event,this)"><span class="mi mi-xs">edit</span>この1箇所を変更</button>'
+    +'</div>';
+  if(is&&is.type==='yure'){
+    const alt=word===is.wordA?is.wordB:is.wordA;
+    html+='<button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncRepW(this)" data-from="'+eH(word)+'" data-to="'+eH(alt)+'"><span class="mi mi-xs">find_replace</span>全件「'+eH(alt)+'」に統一</button>';
+    html+='<button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncRepW(this)" data-from="'+eH(alt)+'" data-to="'+eH(word)+'"><span class="mi mi-xs">find_replace</span>全件「'+eH(word)+'」に統一</button>';
+  }
+  html+='<button class="btn btn-secondary btn-sm" style="width:100%" onclick="ncHPop()"><span class="mi mi-xs">check</span>閉じる</button>';
+  p.innerHTML=html;
+  ncShowPop(p,el);
+  setTimeout(function(){const inp=document.getElementById('nc-snipEditVal');if(inp){inp.focus();inp.select();}},80);
+}
+function ncSnipEditFromBtn(e,btn){e.stopPropagation();ncSnipEdit(btn.dataset.word||'',+btn.dataset.pos,+(btn.dataset.di||0));}
+function ncSnipEdit(word,pos,di){
+  const to=document.getElementById('nc-snipEditVal').value.trim();
+  if(!to||to===word){ncHPop();return;}
+  const s=document.getElementById('nc-srcEditor'),src=s.value;
+  const searchFrom=Math.max(0,pos-200);
+  const localIdx=src.slice(searchFrom,Math.min(src.length,pos+200)).indexOf(word);
+  if(localIdx<0){ncToast('位置がずれています。再実行してください');return;}
+  const actualPos=searchFrom+localIdx;
+  ncHPop();
+  s.value=s.value.slice(0,actualPos)+to+s.value.slice(actualPos+word.length);
+  ncUpCt();ncToast('1箇所を「'+to+'」に変更');ncRunProof();
+}
+function ncSnipSentEditGobi(e){
+  if(e)e.stopPropagation();
+  const ta=document.getElementById('nc-snipSentVal');if(!ta)return;
+  const to=ta.value.trim(),origSent=ta.dataset.orig||'';
+  if(!to||to===origSent)return;
+  const s=document.getElementById('nc-srcEditor'),src=s.value;
+  let idx=src.indexOf(origSent),replaceLen=origSent.length;
+  if(idx<0){const ind='\u3000'+origSent;const ii=src.indexOf(ind);if(ii>=0){idx=ii;replaceLen=ind.length;}}
+  const actualOrig=idx>=0?src.slice(idx,idx+replaceLen):origSent;
+  const p=document.getElementById('nc-yPop');
+  const prevTitle=p.querySelector('.yure-popup-title')?.outerHTML||'';
+  let html=prevTitle+'<div style="font-size:10px;color:var(--text3);margin-bottom:4px">変更プレビュー：</div>';
+  html+='<div style="font-family:var(--font-mincho);font-size:12px;line-height:1.8;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:6px;word-break:break-all">'
+    +'<span style="color:var(--text3);text-decoration:line-through">'+eH(actualOrig)+'</span><br>'
+    +'<span style="color:var(--primary-dark);font-weight:600">'+eH(to)+'</span></div>';
+  html+='<button class="btn btn-primary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncSnipSentCommit(event)"><span class="mi mi-xs">check</span>確定して書き換え</button>';
+  html+='<button class="btn btn-secondary btn-sm" style="width:100%" onclick="ncSnipSentBack(event)"><span class="mi mi-xs">arrow_back</span>戻る</button>';
+  p.innerHTML=html;
+  p.dataset.commitTo=to;p.dataset.commitIdx=idx;p.dataset.commitLen=replaceLen;p.dataset.commitOrig=origSent;
+}
+function ncSnipSentCommit(e){
+  if(e)e.stopPropagation();
+  const p=document.getElementById('nc-yPop');
+  const to=p.dataset.commitTo||'';let idx=+p.dataset.commitIdx,len=+p.dataset.commitLen;
+  const origSent=p.dataset.commitOrig||'';
+  const s=document.getElementById('nc-srcEditor');
+  if(idx<0&&origSent){const ind='\u3000'+origSent;const ii=s.value.indexOf(ind);if(ii>=0){idx=ii;len=ind.length;}}
+  if(idx<0){ncToast('文の位置が見つかりません。再実行してください');ncHPop();return;}
+  ncHPop();s.value=s.value.slice(0,idx)+to+s.value.slice(idx+len);
+  ncUpCt();ncToast('文を書き換えました');ncRunProof();
+}
+function ncSnipSentBack(e){
+  if(e)e.stopPropagation();
+  const p=document.getElementById('nc-yPop');
+  const orig=p.dataset.commitOrig||'',edited=p.dataset.commitTo||'';
+  const prevTitle=p.querySelector('.yure-popup-title')?.outerHTML||'';
+  let html=prevTitle+'<div style="font-size:10px;color:var(--text3);margin-bottom:3px">文ごと書き換え：</div>'
+    +'<textarea id="nc-snipSentVal" style="width:100%;font-family:var(--font-mincho);font-size:12px;line-height:1.7;padding:6px 8px;border:1px solid var(--border);border-radius:8px;resize:vertical;min-height:64px;margin-bottom:6px;color:var(--text)">'+eH(edited)+'</textarea>'
+    +'<button class="btn btn-primary btn-sm" style="width:100%;margin-bottom:6px" onclick="ncSnipSentEditGobi(event)"><span class="mi mi-xs">edit</span>この文を書き換え</button>'
+    +'<button class="btn btn-secondary btn-sm" style="width:100%" onclick="ncHPop()"><span class="mi mi-xs">check</span>閉じる</button>';
+  p.innerHTML=html;
+  document.getElementById('nc-snipSentVal').dataset.orig=orig;
+  setTimeout(function(){const ta=document.getElementById('nc-snipSentVal');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}},50);
+}
+
 
 // 分割
 function ncSetSM(mode,btn){
@@ -2204,6 +2474,57 @@ function ncToast(msg){
 // nc確認
 function ncConfOk(){const cb=_ncConfCallback;document.getElementById('nc-confOvl').classList.remove('show');_ncConfCallback=null;if(cb) cb();}
 function ncConfCancel(){document.getElementById('nc-confOvl').classList.remove('show');_ncConfCallback=null;}
+
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#nc-yPop')&&!e.target.closest('.hl-yure')&&!e.target.closest('.hl-gobi')&&!e.target.closest('.hl-ng')&&!e.target.closest('.proof-snippet'))ncHPop();
+});
+
+// ============================================================
+// コンテスト締切日ユーティリティ
+// ============================================================
+function calcDaysLeft(deadline){
+  if(!deadline)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(deadline);d.setHours(0,0,0,0);
+  return Math.round((d-today)/(1000*60*60*24));
+}
+function deadlineBadge(deadline){
+  const days=calcDaysLeft(deadline);
+  if(days===null)return '';
+  if(days<0)return `<span style="font-size:11px;color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:10px">締切済み</span>`;
+  if(days===0)return `<span style="font-size:11px;color:#fff;background:#c9584a;padding:2px 8px;border-radius:10px;font-weight:700">本日締切！</span>`;
+  if(days<=3)return `<span style="font-size:11px;color:#fff;background:#e87b6b;padding:2px 8px;border-radius:10px;font-weight:700">あと${days}日</span>`;
+  if(days<=7)return `<span style="font-size:11px;color:var(--primary-dark);background:var(--primary-pale);padding:2px 8px;border-radius:10px;font-weight:600">あと${days}日</span>`;
+  return `<span style="font-size:11px;color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:10px">あと${days}日</span>`;
+}
+
+// ============================================================
+// 統計バー折りたたみ
+// ============================================================
+function toggleStat(type){
+  const statMap={works:'works-stat',char:'char-stat',contest:'contest-stat'};
+  const miniMap={works:'works-stat-mini',char:'char-stat-mini',contest:'contest-stat-mini'};
+  const keyMap={works:'stat_works_collapsed',char:'stat_char_collapsed',contest:'stat_contest_collapsed'};
+  const el=document.getElementById(statMap[type]);
+  const mini=document.getElementById(miniMap[type]);
+  if(!el)return;
+  const isCollapsed=el.style.display==='none';
+  if(isCollapsed){
+    el.style.display='flex';
+    if(mini)mini.style.display='none';
+    localStorage.setItem(keyMap[type],'0');
+  }else{
+    el.style.display='none';
+    if(mini)mini.style.display='flex';
+    localStorage.setItem(keyMap[type],'1');
+  }
+}
+
+// ヘッダーの高さを計算してstat-barのtopを調整
+function updateStatBarTop(){
+  const h=document.querySelector('.header');
+  if(h) document.documentElement.style.setProperty('--header-h', h.offsetHeight+'px');
+}
 
 // ============================================================
 // アコーディオン
@@ -2268,6 +2589,8 @@ renderWorks();
 renderCharacters();
 renderContests();
 displayLastModified();
+updateStatBarTop();
+window.addEventListener('resize',updateStatBarTop);
 initFromClaudeStorage();
 tryRestoreFromIDB();
 restoreGistCredentials().then(()=>tryRestoreFromGist());
