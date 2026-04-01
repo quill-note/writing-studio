@@ -1598,7 +1598,7 @@ function renderContests(){
     const submitted=contests.filter(c=>c.status&&c.status!=='').length;
     const won=contests.filter(c=>c.status==='受賞').length;
     const finalist=contests.filter(c=>['最終','二次','一次','受賞'].includes(c.status)).length;
-    statEl.innerHTML=`<span class="stat-chip"><span class="mi">emoji_events</span>${contests.length}件</span><span class="stat-chip"><span class="mi">trending_up</span>通過 ${finalist}</span><span class="stat-chip"><span class="mi">star</span>受賞 ${won}</span><button class="stat-toggle-btn" onclick="toggleStat('contest')"><span class="mi">expand_less</span></button>`;
+    statEl.innerHTML=`<span class="stat-mini-label">合計：</span><span class="stat-mini-num">${contests.length}</span><span class="stat-mini-label">　通過：</span><span class="stat-mini-num">${finalist}</span><span class="stat-mini-label">　受賞：</span><span class="stat-mini-num">${won}</span>`;
     const ctm=document.getElementById('contest-mini-num');if(ctm)ctm.textContent=contests.length+'件';
   } else {statEl.style.display='none';}
   const el=document.getElementById('contest-list');
@@ -1611,8 +1611,8 @@ function renderContests(){
     </div>
     ${c.work?`<div class="card-work"><span class="mi" style="font-size:13px;margin-right:2px">auto_stories</span>${esc(c.work)}</div>`:''}
     <div style="display:flex;align-items:center;gap:6px;margin-top:2px">${c.deadline?deadlineBadge(c.deadline):''}${c.resultPeriod?`<span style="font-size:11px;color:var(--text3)">結果: ${esc(c.resultPeriod)}</span>`:''}</div>
-    ${(c.tags||[]).length?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">${c.tags.join('　')}</div>`:''}
-    ${(c.platforms||[]).length?`<div style="margin-top:4px;font-size:12px;color:var(--text3)">${c.platforms.join('　')}</div>`:''}
+    ${(c.tags||[]).length?`<div class="card-tags" style="margin-top:8px">${c.tags.map(t=>`<span style="font-size:11px;padding:2px 8px;border-radius:8px;background:var(--tag-bg);color:var(--tag-text)">#${esc(t)}</span>`).join(' ')}</div>`:''}
+    ${(c.platforms||[]).length?`<div class="card-tags" style="margin-top:4px">${c.platforms.map(p=>`<span style="font-size:11px;padding:2px 8px;border-radius:8px;background:var(--tag-bg);color:var(--tag-text)">#${esc(p)}</span>`).join(' ')}</div>`:''}
   </div>`).join('');
 }
 function toggleContestFilterTag(t){const i=contestActiveTag.indexOf(t);if(i>=0)contestActiveTag.splice(i,1);else contestActiveTag.push(t);renderContests();}
