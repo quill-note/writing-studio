@@ -2161,7 +2161,8 @@ function ncRunProof(){
     if(!pairs.length) return;
     const minDist=Math.min(...pairs.map(p=>p.dist));
     const pairSnips=pairs.map(p=>({from:p.from,to:p.to,dist:p.dist,ctxFrom:text.slice(Math.max(0,p.from-10),p.from)+'【'+w+'】'+text.slice(p.from+w.length,p.from+w.length+10),ctxTo:text.slice(Math.max(0,p.to-10),p.to)+'【'+w+'】'+text.slice(p.to+w.length,p.to+w.length+10)}));
-    ncIssues.push({type:'ng',word:w,count:positions.length,pairs,pairSnips,message:'「'+w+'」… 直近'+minDist.toLocaleString()+'字以内に再登場（計'+positions.length+'回）'});
+    const nearCount=new Set(pairs.flatMap(p=>[p.from,p.to])).size;
+ncIssues.push({type:'ng',word:w,count:positions.length,pairs,pairSnips,message:'「'+w+'」… 直近'+minDist.toLocaleString()+'字以内に再登場（'+nearCount+'回）'});
   });
   ncRenderProof();
 }
