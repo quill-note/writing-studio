@@ -262,7 +262,7 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 }
 .plot-chapter-header {
   font-size: 13px; font-weight: 700; color: var(--text2);
-  padding: 8px 4px 6px; margin-top: 8px;
+  padding: 8px 0 6px; margin-top: 8px;
   border-bottom: 1.5px solid var(--border); margin-bottom: 8px;
   display: flex; align-items: center; gap: 6px;
 }
@@ -2777,7 +2777,17 @@ function renderPlotGraph(plots, filterChapter){
   const withEmotion = targets.filter(p=>p.emotion);
 
   if(!withEmotion.length){
-    area.innerHTML = `<div class="plot-graph-wrap"><div class="plot-graph-title"><span class="mi mi-sm">show_chart</span>感情グラフ</div><div class="plot-graph-filter">${filterHtml}</div><p style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0">感情の高さが設定された場面がありません</p></div>`;
+    const graphOpen2 = area.dataset.open !== '0';
+    area.innerHTML = `<div class="accordion-card${graphOpen2?' open':''}" style="margin-bottom:12px">
+      <div class="accordion-header" onclick="togglePlotGraph()" style="padding:10px 14px">
+        <div class="accordion-header-left">
+          <div class="accordion-icon-wrap" style="width:28px;height:28px;border-radius:8px"><span class="mi" style="font-size:16px">show_chart</span></div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">感情グラフ <span style="font-size:11px;color:var(--text3);font-weight:400">データなし</span></div>
+        </div>
+        <span class="mi accordion-arrow">expand_more</span>
+      </div>
+      <div class="accordion-body" style="padding:0 14px 12px"><div style="padding:8px 0;font-size:12px;color:var(--text3);text-align:center">感情の高さが設定された場面がありません</div></div>
+    </div>`;
     return;
   }
 
@@ -2825,16 +2835,34 @@ function renderPlotGraph(plots, filterChapter){
     ${dots}
   </svg>`;
 
-  area.innerHTML = `<div class="plot-graph-wrap">
-    <div class="plot-graph-title"><span class="mi mi-sm">show_chart</span>感情グラフ（${withEmotion.length}場面）</div>
-    <div class="plot-graph-filter">${filterHtml}</div>
-    <div style="overflow-x:auto">${svg}</div>
-    <div class="plot-graph-legend">
-      <div class="plot-graph-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#d0b8b0;display:inline-block"></span>低：日常</div>
-      <div class="plot-graph-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#e8a090;display:inline-block"></span>中：葛藤</div>
-      <div class="plot-graph-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#e87b6b;display:inline-block"></span>高：山場</div>
+  const graphOpen = area.dataset.open !== '0';
+  area.innerHTML = `<div class="accordion-card${graphOpen?' open':''}" style="margin-bottom:12px">
+    <div class="accordion-header" onclick="togglePlotGraph()" style="padding:10px 14px">
+      <div class="accordion-header-left">
+        <div class="accordion-icon-wrap" style="width:28px;height:28px;border-radius:8px"><span class="mi" style="font-size:16px">show_chart</span></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">感情グラフ <span style="font-size:11px;color:var(--text3);font-weight:400">${withEmotion.length}場面</span></div>
+      </div>
+      <span class="mi accordion-arrow">expand_more</span>
+    </div>
+    <div class="accordion-body" style="padding:0 14px 12px">
+      <div class="plot-graph-filter" style="margin-bottom:8px">${filterHtml}</div>
+      <div style="overflow-x:auto">${svg}</div>
+      <div class="plot-graph-legend">
+        <div class="plot-graph-legend-item"><span style="width:7px;height:7px;border-radius:50%;background:#d0b8b0;display:inline-block"></span>低</div>
+        <div class="plot-graph-legend-item"><span style="width:7px;height:7px;border-radius:50%;background:#e8a090;display:inline-block"></span>中</div>
+        <div class="plot-graph-legend-item"><span style="width:7px;height:7px;border-radius:50%;background:#e87b6b;display:inline-block"></span>高</div>
+      </div>
     </div>
   </div>`;
+}
+
+function togglePlotGraph(){
+  const area=document.getElementById('plot-graph-area');
+  if(!area)return;
+  const card=area.querySelector('.accordion-card');
+  if(!card)return;
+  const isOpen=card.classList.toggle('open');
+  area.dataset.open=isOpen?'1':'0';
 }
 
 function plotGraphFilter(chapter){
