@@ -2682,11 +2682,16 @@ function renderPlots(){
       ontouchstart="plotTouchStart(event,${i})"
       ontouchmove="plotTouchMove(event)"
       ontouchend="plotTouchEnd(event,${i})">
-      <div class="plot-card-header">
-        <span class="mi" style="color:var(--text3);font-size:18px;touch-action:none;cursor:grab" onclick="event.stopPropagation()">drag_indicator</span>
-        ${(p.date||p.place)?`<span class="plot-card-label">${[p.date,p.place].filter(Boolean).map(s=>esc(s)).join('　')}</span>`:''}
-        ${p.title?`<span class="plot-card-title">${esc(p.title)}</span>`:''}
-        ${p.emotion?`<span class="plot-emotion-dot" style="background:${{low:'var(--border)',mid:'var(--primary-light)',high:'#e87b6b'}[p.emotion]||'var(--border)'}"></span>`:''}
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <span class="mi" style="color:var(--text3);font-size:18px;touch-action:none;cursor:grab;flex-shrink:0;margin-top:2px" onclick="event.stopPropagation()">drag_indicator</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            ${p.date?`<span class="plot-card-label">${esc(p.date)}</span>`:''}
+            ${p.place?`<span class="plot-card-label" style="background:var(--surface2);border-color:var(--border);color:var(--text2)">${esc(p.place)}</span>`:''}
+            ${p.emotion?`<span class="plot-emotion-dot" style="background:${{low:'var(--border)',mid:'var(--primary-light)',high:'#e87b6b'}[p.emotion]||'var(--border)'}"></span>`:''}
+          </div>
+          ${p.title?`<div style="font-size:14px;font-weight:700;color:var(--text)">${esc(p.title)}</div>`:''}
+        </div>
       </div>
       ${(p.chars&&p.chars.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${p.chars.map(c=>`<span style="font-size:11px;background:var(--primary-pale);color:var(--primary-dark);padding:2px 8px;border-radius:10px">${esc(c)}</span>`).join('')}</div>`:''}
       ${p.body?`<div class="plot-card-body">${esc(p.body)}</div>`:''}
