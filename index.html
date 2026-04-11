@@ -230,6 +230,36 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
   transition: all 0.15s;
 }
 .plot-char-chip.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
+.plot-graph-wrap {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.plot-graph-title {
+  font-size: 12px; font-weight: 700; color: var(--text3);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.plot-graph-filter {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.plot-graph-filter-btn {
+  font-size: 11px; padding: 3px 10px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  color: var(--text2); cursor: pointer; font-family: inherit;
+  font-weight: 600; transition: all 0.15s;
+}
+.plot-graph-filter-btn.active {
+  border-color: var(--primary); background: var(--primary-pale);
+  color: var(--primary-dark);
+}
+.plot-graph-canvas { width: 100%; height: 120px; display: block; }
+.plot-graph-legend {
+  display: flex; gap: 12px; margin-top: 8px; justify-content: center;
+}
+.plot-graph-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; color: var(--text3);
+}
 .plot-chapter-header {
   font-size: 13px; font-weight: 700; color: var(--text2);
   padding: 8px 4px 6px; margin-top: 8px;
@@ -491,6 +521,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     <div id="work-detail-content" class="detail-section" style="padding:0"></div>
   </div>
   <div id="work-detail-panel-plot" class="work-detail-panel">
+    <div id="plot-graph-area"></div>
     <div id="plot-list"></div>
     <button class="plot-add-btn" onclick="openAddPlotModal()">
       <span class="mi mi-sm">add</span>場面を追加
@@ -835,7 +866,11 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     <div class="modal-title" id="plot-modal-title">場面を追加</div>
     <div class="form-group">
       <label class="form-label">章・話（任意）</label>
-      <input type="text" class="form-input" id="fp-chapter" placeholder="第1章、第1話など">
+      <div style="position:relative">
+        <input type="text" class="form-input" id="fp-chapter" placeholder="第1章、第1話など"
+          oninput="showChapterSuggestions()" onfocus="showChapterSuggestions()" autocomplete="off">
+        <div id="fp-chapter-suggestions" class="suggest-list"></div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">時期</label>
@@ -2591,6 +2626,7 @@ function ncConfCancel(){document.getElementById('nc-confOvl').classList.remove('
 
 document.addEventListener('click',function(e){
   if(!e.target.closest('#nc-yPop')&&!e.target.closest('.hl-yure')&&!e.target.closest('.hl-gobi')&&!e.target.closest('.hl-ng')&&!e.target.closest('.proof-snippet'))ncHPop();
+  if(!e.target.closest('#fp-chapter')&&!e.target.closest('#fp-chapter-suggestions')){const l=document.getElementById('fp-chapter-suggestions');if(l)l.classList.remove('open');}
 });
 
 // ============================================================
@@ -2660,6 +2696,7 @@ function switchWorkTab(tab,btn){
   document.querySelectorAll('.work-detail-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('work-detail-panel-'+tab).classList.add('active');
+  window.scrollTo(0,0);
   if(tab==='plot') renderPlots();
 }
 
@@ -2713,6 +2750,98 @@ function renderPlots(){
   });
   el.innerHTML=html;
   initPlotDrag();
+  renderPlotGraph(plots, null);
+}
+
+let _plotGraphChapter = null;
+
+function renderPlotGraph(plots, filterChapter){
+  const area = document.getElementById('plot-graph-area');
+  if(!area) return;
+  const emotionVal = {low:1, mid:2, high:3};
+  const emotionLabel = {low:'低', mid:'中', high:'高'};
+
+  // 章一覧
+  const chapters = [...new Set(plots.map(p=>p.chapter||'').filter(Boolean))];
+
+  // フィルターボタン
+  let filterHtml = `<button class="plot-graph-filter-btn${filterChapter===null?' active':''}" onclick="plotGraphFilter(null)">全体</button>`;
+  chapters.forEach(ch=>{
+    filterHtml += `<button class="plot-graph-filter-btn${filterChapter===ch?' active':''}" onclick="plotGraphFilter('${ch.replace(/'/g,"\'")}')">${esc(ch)}</button>`;
+  });
+
+  // 対象場面
+  const targets = filterChapter
+    ? plots.filter(p=>(p.chapter||'')===filterChapter)
+    : plots;
+  const withEmotion = targets.filter(p=>p.emotion);
+
+  if(!withEmotion.length){
+    area.innerHTML = `<div class="plot-graph-wrap"><div class="plot-graph-title"><span class="mi mi-sm">show_chart</span>感情グラフ</div><div class="plot-graph-filter">${filterHtml}</div><p style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0">感情の高さが設定された場面がありません</p></div>`;
+    return;
+  }
+
+  // Canvas描画
+  const W = Math.min(window.innerWidth - 64, 600);
+  const H = 100;
+  const pad = {l:28, r:12, t:12, b:24};
+  const gW = W - pad.l - pad.r;
+  const gH = H - pad.t - pad.b;
+  const n = withEmotion.length;
+  const stepX = n > 1 ? gW / (n-1) : gW / 2;
+
+  let points = withEmotion.map((p,i)=>({
+    x: pad.l + (n>1 ? i*stepX : gW/2),
+    y: pad.t + gH - ((emotionVal[p.emotion]||1)-1) / 2 * gH,
+    emotion: p.emotion,
+    title: p.title || p.date || ''
+  }));
+
+  // SVGで描画
+  const colorMap = {low:'var(--border)', mid:'var(--primary-light)', high:'#e87b6b'};
+  const colorHex = {low:'#d0b8b0', mid:'#e8a090', high:'#e87b6b'};
+
+  // 横グリッドライン
+  let svgLines = '';
+  [1,2,3].forEach(v=>{
+    const y = pad.t + gH - (v-1)/2*gH;
+    const label = emotionLabel[['low','mid','high'][v-1]];
+    svgLines += `<line x1="${pad.l}" y1="${y}" x2="${pad.l+gW}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+    svgLines += `<text x="${pad.l-4}" y="${y+4}" text-anchor="end" font-size="9" fill="var(--text3)">${label}</text>`;
+  });
+
+  // 折れ線
+  const pathD = points.map((p,i)=>`${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+  // 塗りつぶしエリア
+  const areaD = `${pathD} L${points[points.length-1].x},${pad.t+gH} L${points[0].x},${pad.t+gH} Z`;
+
+  // ドット
+  const dots = points.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="5" fill="${colorHex[p.emotion]||'#ccc'}" stroke="white" stroke-width="1.5"/>`).join('');
+
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible">
+    ${svgLines}
+    <path d="${areaD}" fill="var(--primary-pale)" opacity="0.5"/>
+    <path d="${pathD}" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+
+  area.innerHTML = `<div class="plot-graph-wrap">
+    <div class="plot-graph-title"><span class="mi mi-sm">show_chart</span>感情グラフ（${withEmotion.length}場面）</div>
+    <div class="plot-graph-filter">${filterHtml}</div>
+    <div style="overflow-x:auto">${svg}</div>
+    <div class="plot-graph-legend">
+      <div class="plot-graph-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#d0b8b0;display:inline-block"></span>低：日常</div>
+      <div class="plot-graph-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#e8a090;display:inline-block"></span>中：葛藤</div>
+      <div class="plot-graph-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#e87b6b;display:inline-block"></span>高：山場</div>
+    </div>
+  </div>`;
+}
+
+function plotGraphFilter(chapter){
+  _plotGraphChapter = chapter;
+  const plots = getPlots(viewingWorkId);
+  renderPlotGraph(plots, chapter);
+  // フィルター後もリスト側は全体表示のまま
 }
 
 let _plotDragIdx=null,_plotTouchIdx=null,_plotTouchEl=null,_plotTouchClone=null,_plotLongPressTimer=null,_plotDragActive=false;
@@ -2720,6 +2849,23 @@ let _plotDragIdx=null,_plotTouchIdx=null,_plotTouchEl=null,_plotTouchClone=null,
 function plotCardClick(e,i){
   if(_plotDragActive)return;
   openEditPlotModal(i);
+}
+
+function showChapterSuggestions(){
+  const input=document.getElementById('fp-chapter');
+  const list=document.getElementById('fp-chapter-suggestions');
+  if(!input||!list||!viewingWorkId)return;
+  const q=input.value.toLowerCase();
+  const plots=getPlots(viewingWorkId);
+  const chapters=[...new Set(plots.map(p=>p.chapter||'').filter(Boolean))];
+  const filtered=chapters.filter(ch=>!q||ch.toLowerCase().includes(q));
+  if(!filtered.length){list.classList.remove('open');return;}
+  list.innerHTML=filtered.map(ch=>`<div class="suggest-item" onmousedown="pickChapterSuggestion('${ch.replace(/'/g,"\\'")}')"><span class="suggest-type">章・話</span><span class="suggest-text">${esc(ch)}</span></div>`).join('');
+  list.classList.add('open');
+}
+function pickChapterSuggestion(val){
+  document.getElementById('fp-chapter').value=val;
+  document.getElementById('fp-chapter-suggestions').classList.remove('open');
 }
 
 function selectEmotion(btn){
@@ -2762,6 +2908,18 @@ function plotDrop(e,targetIdx){
   const plots=getPlots(viewingWorkId);
   const moved=plots.splice(_plotDragIdx,1)[0];
   plots.splice(targetIdx,0,moved);
+  // ドロップ先の前後のカードから章を推定して自動更新
+  const neighbor=plots[targetIdx-1]||plots[targetIdx+1];
+  if(neighbor&&neighbor.chapter&&neighbor.chapter!==moved.chapter){
+    // 前後が同じ章ならその章に合わせる
+    const prev=plots[targetIdx-1];
+    const next=plots[targetIdx+1];
+    if(prev&&next&&prev.chapter===next.chapter){
+      moved.chapter=prev.chapter;
+    }else if(prev&&prev.chapter){
+      moved.chapter=prev.chapter;
+    }
+  }
   savePlots(viewingWorkId,plots);
   renderPlots();
 }
@@ -2819,6 +2977,13 @@ function plotTouchEnd(e,i){
         const plots=getPlots(viewingWorkId);
         const moved=plots.splice(_plotTouchIdx,1)[0];
         plots.splice(targetIdx,0,moved);
+        const prev=plots[targetIdx-1];
+        const next=plots[targetIdx+1];
+        if(prev&&next&&prev.chapter===next.chapter&&prev.chapter!==moved.chapter){
+          moved.chapter=prev.chapter;
+        }else if(prev&&prev.chapter&&prev.chapter!==moved.chapter){
+          moved.chapter=prev.chapter;
+        }
         savePlots(viewingWorkId,plots);
         renderPlots();
       }
