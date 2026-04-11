@@ -168,7 +168,7 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .pwa-step { font-size: 13px; color: var(--text2); margin-bottom: 4px; line-height: 1.5; }
 
 /* アラート */
-.confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(74,37,37,0.5); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+.confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(74,37,37,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
 .confirm-overlay.active { display: flex; }
 .confirm-box { background: var(--surface); border-radius: 16px; padding: 24px; width: 100%; max-width: 320px; box-shadow: 0 8px 30px rgba(74,37,37,0.2); }
 .confirm-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
@@ -198,13 +198,14 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .work-detail-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 0; }
 .work-detail-tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2.5px solid transparent; margin-bottom: -2px; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
 .work-detail-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-.work-detail-panel { display: none; padding: 16px; }
+.work-detail-panel { display: none; padding: 0; }
 .work-detail-panel.active { display: block; }
 .plot-card {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 14px; padding: 14px 16px; margin-bottom: 12px;
   box-shadow: 0 2px 6px var(--shadow); cursor: pointer;
   transition: box-shadow 0.15s;
+  position: relative;
 }
 .plot-card:hover { box-shadow: 0 4px 12px var(--shadow); }
 .plot-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
@@ -262,9 +263,10 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 }
 .plot-chapter-header {
   font-size: 13px; font-weight: 700; color: var(--text2);
-  padding: 8px 0 6px; margin-top: 8px;
+  padding: 8px 0 6px; margin-top: 4px;
   border-bottom: 1.5px solid var(--border); margin-bottom: 8px;
   display: flex; align-items: center; gap: 6px;
+  margin-left: 0; margin-right: 0;
 }
 .plot-emotion-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
@@ -517,15 +519,17 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
       <button class="work-detail-tab" onclick="switchWorkTab('plot',this)">プロット</button>
     </div>
   </div>
-  <div id="work-detail-panel-info" class="work-detail-panel active">
+  <div id="work-detail-panel-info" class="work-detail-panel active" style="padding:16px">
     <div id="work-detail-content" class="detail-section" style="padding:0"></div>
   </div>
   <div id="work-detail-panel-plot" class="work-detail-panel">
-    <div id="plot-graph-area"></div>
-    <div id="plot-list"></div>
-    <button class="plot-add-btn" onclick="openAddPlotModal()">
-      <span class="mi mi-sm">add</span>場面を追加
-    </button>
+    <div id="plot-graph-area" style="padding:14px 16px 0"></div>
+    <div id="plot-list" style="padding:0 16px"></div>
+    <div style="padding:0 16px 16px">
+      <button class="plot-add-btn" onclick="openAddPlotModal()">
+        <span class="mi mi-sm">add</span>場面を追加
+      </button>
+    </div>
   </div>
 </div>
 
@@ -2719,20 +2723,22 @@ function renderPlots(){
       ontouchstart="plotTouchStart(event,${i})"
       ontouchmove="plotTouchMove(event)"
       ontouchend="plotTouchEnd(event,${i})">
-      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
-        <span class="mi" style="color:var(--text3);font-size:18px;touch-action:none;cursor:grab;flex-shrink:0;margin-top:2px" onclick="event.stopPropagation()">drag_indicator</span>
+      <div style="display:flex;gap:0">
+        <svg width="9" height="12" viewBox="0 0 9 12" style="flex-shrink:0;align-self:center;margin-right:8px;margin-left:-2px;cursor:grab;touch-action:none" onclick="event.stopPropagation()"><circle cx="2" cy="2" r="1" fill="var(--text3)"/><circle cx="7" cy="2" r="1" fill="var(--text3)"/><circle cx="2" cy="6" r="1" fill="var(--text3)"/><circle cx="7" cy="6" r="1" fill="var(--text3)"/><circle cx="2" cy="10" r="1" fill="var(--text3)"/><circle cx="7" cy="10" r="1" fill="var(--text3)"/></svg>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
             ${p.date?`<span class="plot-card-label">${esc(p.date)}</span>`:''}
             ${p.place?`<span class="plot-card-label" style="background:var(--surface2);border-color:var(--border);color:var(--text2)">${esc(p.place)}</span>`:''}
             ${p.emotion?`<span class="plot-emotion-dot" style="background:${{low:'var(--border)',mid:'var(--primary-light)',high:'#e87b6b'}[p.emotion]||'var(--border)'}"></span>`:''}
           </div>
-          ${p.title?`<div style="font-size:14px;font-weight:700;color:var(--text)">${esc(p.title)}</div>`:''}
-        </div>
-      </div>
+          ${p.title?`<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${esc(p.title)}</div>`:''}
+          <div>
       ${(p.chars&&p.chars.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${p.chars.map(c=>`<span style="font-size:11px;background:var(--primary-pale);color:var(--primary-dark);padding:2px 8px;border-radius:10px">${esc(c)}</span>`).join('')}</div>`:''}
       ${p.body?`<div class="plot-card-body">${esc(p.body)}</div>`:''}
       ${p.memo?`<div class="plot-card-memo">※ ${esc(p.memo)}</div>`:''}
+          </div>
+        </div>
+      </div>
     </div>
   `);
 
