@@ -194,6 +194,52 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .stat-mini-num { font-size: 13px; font-weight: 700; color: var(--primary); }
 .stat-mini-label { font-size: 10px; color: var(--text3); }
 
+/* ========== プロット ========== */
+.work-detail-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 0; }
+.work-detail-tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2.5px solid transparent; margin-bottom: -2px; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+.work-detail-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.work-detail-panel { display: none; padding: 16px; }
+.work-detail-panel.active { display: block; }
+.plot-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 12px;
+  box-shadow: 0 2px 6px var(--shadow); cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.plot-card:hover { box-shadow: 0 4px 12px var(--shadow); }
+.plot-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.plot-card-label { font-size: 12px; font-weight: 700; color: var(--primary); background: var(--primary-pale); padding: 2px 10px; border-radius: 10px; }
+.plot-card-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+.plot-card-body { font-size: 13px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; }
+.plot-card-memo { font-size: 12px; color: var(--primary-dark); background: var(--primary-pale); border-radius: 8px; padding: 6px 10px; margin-top: 8px; white-space: pre-wrap; line-height: 1.6; }
+.plot-add-btn { width: 100%; padding: 12px; border: 2px dashed var(--primary-light); border-radius: 14px; background: var(--primary-pale); color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; font-family: inherit; }
+.plot-add-btn:hover { background: var(--primary-light); }
+.plot-empty { text-align: center; padding: 40px 16px; color: var(--text3); font-size: 13px; }
+.plot-emotion-btn {
+  flex: 1; padding: 8px 4px; border: 1.5px solid var(--border); border-radius: 10px;
+  background: var(--surface2); color: var(--text2); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.plot-emotion-btn.selected { border-color: var(--primary); background: var(--primary-pale); color: var(--primary-dark); }
+.plot-emotion-btn[data-val="high"].selected { border-color: #e87b6b; background: #fff0ee; color: #c9584a; }
+.plot-char-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--primary-pale); border: 1.5px solid var(--primary-light);
+  border-radius: 16px; padding: 3px 10px; font-size: 12px;
+  color: var(--primary-dark); cursor: pointer; font-weight: 600;
+  transition: all 0.15s;
+}
+.plot-char-chip.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
+.plot-chapter-header {
+  font-size: 13px; font-weight: 700; color: var(--text2);
+  padding: 8px 4px 6px; margin-top: 8px;
+  border-bottom: 1.5px solid var(--border); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.plot-emotion-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
 /* ========== 執筆補助タブ ========== */
 .writing-page { padding: 0 0 20px; }
 .writing-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); background: var(--surface); overflow-x: auto; scrollbar-width: none; }
@@ -436,8 +482,20 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
         <button class="btn-icon" style="color:#f44336" onclick="deleteCurrentWork()"><span class="mi">delete_outline</span></button>
       </div>
     </div>
+    <div class="work-detail-tabs">
+      <button class="work-detail-tab active" onclick="switchWorkTab('info',this)">詳細</button>
+      <button class="work-detail-tab" onclick="switchWorkTab('plot',this)">プロット</button>
+    </div>
   </div>
-  <div id="work-detail-content" class="detail-section"></div>
+  <div id="work-detail-panel-info" class="work-detail-panel active">
+    <div id="work-detail-content" class="detail-section" style="padding:0"></div>
+  </div>
+  <div id="work-detail-panel-plot" class="work-detail-panel">
+    <div id="plot-list"></div>
+    <button class="plot-add-btn" onclick="openAddPlotModal()">
+      <span class="mi mi-sm">add</span>場面を追加
+    </button>
+  </div>
 </div>
 
 <!-- ========== 人物ページ ========== -->
@@ -771,6 +829,55 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
 </nav>
 
 <!-- ========== モーダル群 ========== -->
+<!-- プロット追加/編集 -->
+<div class="modal-overlay" id="plot-modal">
+  <div class="modal">
+    <div class="modal-title" id="plot-modal-title">場面を追加</div>
+    <div class="form-group">
+      <label class="form-label">章・話（任意）</label>
+      <input type="text" class="form-input" id="fp-chapter" placeholder="第1章、第1話など">
+    </div>
+    <div class="form-group">
+      <label class="form-label">時期</label>
+      <input type="text" class="form-input" id="fp-date" placeholder="6月中旬、夏休み前など">
+    </div>
+    <div class="form-group">
+      <label class="form-label">場所</label>
+      <input type="text" class="form-input" id="fp-place" placeholder="美術室、帰り道など">
+    </div>
+    <div class="form-group">
+      <label class="form-label">タイトル（任意）</label>
+      <input type="text" class="form-input" id="fp-title" placeholder="">
+    </div>
+    <div class="form-group">
+      <label class="form-label">登場人物</label>
+      <div id="fp-chars-area" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:6px 0"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">感情の高さ</label>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="plot-emotion-btn" data-val="low" onclick="selectEmotion(this)">低　日常</button>
+        <button type="button" class="plot-emotion-btn" data-val="mid" onclick="selectEmotion(this)">中　葛藤</button>
+        <button type="button" class="plot-emotion-btn" data-val="high" onclick="selectEmotion(this)">高　山場</button>
+      </div>
+      <input type="hidden" id="fp-emotion">
+    </div>
+    <div class="form-group">
+      <label class="form-label">あらすじ *</label>
+      <textarea class="form-textarea" id="fp-body" placeholder="この場面で何が起きるか" style="min-height:100px"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">※ ポイントメモ</label>
+      <textarea class="form-textarea" id="fp-memo" placeholder="この場面で達成したいこと・注意点" style="min-height:60px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('plot-modal')">キャンセル</button>
+      <button id="plot-delete-btn" class="btn-delete" onclick="deletePlotFromModal()" style="display:none">削除</button>
+      <button class="btn-save" onclick="savePlot()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- キャラクター追加/編集 -->
 <div class="modal-overlay" id="char-modal">
   <div class="modal">
@@ -1325,6 +1432,11 @@ function showWorkDetail(id,pushHistory=true) {
     ${w.memo?`<div class="detail-divider"></div><div class="detail-row"><span class="detail-key">メモ</span></div><div style="font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;padding:0 4px;margin-bottom:12px">${esc(w.memo)}</div>`:''}
     ${characters.filter(c=>c.work===w.name).length>0?`<div class="detail-divider"></div><div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">登場人物（${characters.filter(c=>c.work===w.name).length}人）</div><div style="display:flex;flex-wrap:wrap;gap:6px">${characters.filter(c=>c.work===w.name).map(c=>`<span onclick="showDetail(${c.id})" style="font-size:13px;color:var(--primary);cursor:pointer;background:var(--primary-pale);padding:3px 10px;border-radius:8px">${esc(c.name)}</span>`).join('')}</div>`:''}
   `;
+  // タブをリセット
+  document.querySelectorAll('.work-detail-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.work-detail-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.work-detail-tab')[0].classList.add('active');
+  document.getElementById('work-detail-panel-info').classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-work-detail').classList.add('active');
   window.scrollTo(0,0);
@@ -1832,6 +1944,7 @@ function executeCsvImport(){
 // ============================================================
 // モーダル管理（管理系）
 // ============================================================
+function openModal(id){ document.getElementById(id).classList.add('active'); }
 function closeModal(id){ document.getElementById(id).classList.remove('active'); }
 let confirmCallback=null;
 function showConfirm(title,msg,callback){
@@ -2525,6 +2638,253 @@ function toggleStat(type){
 function updateStatBarTop(){
   const h=document.querySelector('.header');
   if(h) document.documentElement.style.setProperty('--header-h', h.offsetHeight+'px');
+}
+
+// ============================================================
+// プロット管理
+// ============================================================
+let editingPlotId=null;
+
+function getPlots(workId){
+  const all=JSON.parse(localStorage.getItem('sosaku_plots')||'{}');
+  return all[workId]||[];
+}
+function savePlots(workId,plots){
+  const all=JSON.parse(localStorage.getItem('sosaku_plots')||'{}');
+  all[workId]=plots;
+  localStorage.setItem('sosaku_plots',JSON.stringify(all));
+}
+
+function switchWorkTab(tab,btn){
+  document.querySelectorAll('.work-detail-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.work-detail-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('work-detail-panel-'+tab).classList.add('active');
+  if(tab==='plot') renderPlots();
+}
+
+function renderPlots(){
+  const el=document.getElementById('plot-list');
+  if(!el||!viewingWorkId)return;
+  const plots=getPlots(viewingWorkId);
+  if(!plots.length){
+    el.innerHTML='<div class="plot-empty"><span class="mi" style="font-size:40px;display:block;margin-bottom:8px">notes</span>場面がまだありません</div>';
+    return;
+  }
+  const cards=plots.map((p,i)=>`
+    <div class="plot-card" id="plot-card-${i}" data-idx="${i}"
+      onclick="plotCardClick(event,${i})"
+      draggable="true"
+      ondragstart="plotDragStart(event,${i})"
+      ondragover="plotDragOver(event)"
+      ondragend="plotDragEnd(event)"
+      ondrop="plotDrop(event,${i})"
+      ontouchstart="plotTouchStart(event,${i})"
+      ontouchmove="plotTouchMove(event)"
+      ontouchend="plotTouchEnd(event,${i})">
+      <div class="plot-card-header">
+        <span class="mi" style="color:var(--text3);font-size:18px;touch-action:none;cursor:grab" onclick="event.stopPropagation()">drag_indicator</span>
+        ${(p.date||p.place)?`<span class="plot-card-label">${[p.date,p.place].filter(Boolean).map(s=>esc(s)).join('　')}</span>`:''}
+        ${p.title?`<span class="plot-card-title">${esc(p.title)}</span>`:''}
+        ${p.emotion?`<span class="plot-emotion-dot" style="background:${{low:'var(--border)',mid:'var(--primary-light)',high:'#e87b6b'}[p.emotion]||'var(--border)'}"></span>`:''}
+      </div>
+      ${(p.chars&&p.chars.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${p.chars.map(c=>`<span style="font-size:11px;background:var(--primary-pale);color:var(--primary-dark);padding:2px 8px;border-radius:10px">${esc(c)}</span>`).join('')}</div>`:''}
+      ${p.body?`<div class="plot-card-body">${esc(p.body)}</div>`:''}
+      ${p.memo?`<div class="plot-card-memo">※ ${esc(p.memo)}</div>`:''}
+    </div>
+  `);
+
+  // 章グループ化
+  const grouped={};
+  plots.forEach((p,i)=>{
+    const ch=p.chapter||'';
+    if(!grouped[ch])grouped[ch]=[];
+    grouped[ch].push({p,i});
+  });
+  let html='';
+  Object.entries(grouped).forEach(([ch,items])=>{
+    if(ch)html+=`<div class="plot-chapter-header"><span class="mi mi-sm">bookmark</span>${esc(ch)}</div>`;
+    html+=items.map(({p,i})=>cards[i]).join('');
+  });
+  el.innerHTML=html;
+  initPlotDrag();
+}
+
+let _plotDragIdx=null,_plotTouchIdx=null,_plotTouchEl=null,_plotTouchClone=null,_plotLongPressTimer=null,_plotDragActive=false;
+
+function plotCardClick(e,i){
+  if(_plotDragActive)return;
+  openEditPlotModal(i);
+}
+
+function selectEmotion(btn){
+  document.querySelectorAll('.plot-emotion-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('fp-emotion').value=btn.dataset.val;
+}
+
+function renderPlotCharChips(selected){
+  const area=document.getElementById('fp-chars-area');
+  if(!area||!viewingWorkId)return;
+  const w=worksData.find(x=>x.id===viewingWorkId);
+  if(!w)return;
+  const chars=characters.filter(c=>c.work===w.name);
+  if(!chars.length){area.innerHTML='<span style="font-size:12px;color:var(--text3)">登場人物が登録されていません</span>';return;}
+  area.innerHTML=chars.map(c=>`<span class="plot-char-chip${selected.includes(c.name)?' selected':''}" data-name="${esc(c.name)}" onclick="this.classList.toggle('selected')">${esc(c.name)}</span>`).join('');
+}
+
+function initPlotDrag(){
+  // タッチ長押し検出は ontouchstart で処理
+}
+
+function plotDragStart(e,i){
+  _plotDragIdx=i;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{const el=document.getElementById('plot-card-'+i);if(el)el.style.opacity='0.4';},0);
+}
+function plotDragOver(e){
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  const card=e.currentTarget;
+  card.style.borderColor='var(--primary)';
+}
+function plotDragEnd(e){
+  document.querySelectorAll('.plot-card').forEach(c=>{c.style.opacity='';c.style.borderColor='';});
+  _plotDragIdx=null;
+}
+function plotDrop(e,targetIdx){
+  e.preventDefault();
+  if(_plotDragIdx===null||_plotDragIdx===targetIdx)return;
+  const plots=getPlots(viewingWorkId);
+  const moved=plots.splice(_plotDragIdx,1)[0];
+  plots.splice(targetIdx,0,moved);
+  savePlots(viewingWorkId,plots);
+  renderPlots();
+}
+
+// タッチ長押しドラッグ
+function plotTouchStart(e,i){
+  _plotTouchIdx=i;
+  _plotDragActive=false;
+  _plotLongPressTimer=setTimeout(()=>{
+    _plotDragActive=true;
+    const el=document.getElementById('plot-card-'+i);
+    if(!el)return;
+    _plotTouchEl=el;
+    const clone=el.cloneNode(true);
+    const r=el.getBoundingClientRect();
+    clone.style.cssText=`position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;opacity:0.85;z-index:9999;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.18);`;
+    document.body.appendChild(clone);
+    _plotTouchClone=clone;
+    el.style.opacity='0.3';
+    if(navigator.vibrate)navigator.vibrate(40);
+  },500);
+}
+function plotTouchMove(e){
+  if(!_plotDragActive||!_plotTouchClone)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  const r=_plotTouchEl.getBoundingClientRect();
+  _plotTouchClone.style.left=(t.clientX-r.width/2)+'px';
+  _plotTouchClone.style.top=(t.clientY-40)+'px';
+  // ホバー対象を探す
+  _plotTouchClone.style.display='none';
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  _plotTouchClone.style.display='';
+  if(el){
+    const card=el.closest('.plot-card');
+    document.querySelectorAll('.plot-card').forEach(c=>c.style.borderColor='');
+    if(card&&card!==_plotTouchEl)card.style.borderColor='var(--primary)';
+  }
+}
+function plotTouchEnd(e,i){
+  clearTimeout(_plotLongPressTimer);
+  if(!_plotDragActive){_plotTouchIdx=null;return;}
+  const t=e.changedTouches[0];
+  if(_plotTouchClone){_plotTouchClone.remove();_plotTouchClone=null;}
+  if(_plotTouchEl){_plotTouchEl.style.opacity='';}
+  document.querySelectorAll('.plot-card').forEach(c=>c.style.borderColor='');
+  // ドロップ先を特定
+  _plotTouchClone=null;
+  const el2=document.elementFromPoint(t.clientX,t.clientY);
+  if(el2){
+    const card=el2.closest('.plot-card');
+    if(card&&card.dataset.idx!==undefined){
+      const targetIdx=+card.dataset.idx;
+      if(targetIdx!==_plotTouchIdx){
+        const plots=getPlots(viewingWorkId);
+        const moved=plots.splice(_plotTouchIdx,1)[0];
+        plots.splice(targetIdx,0,moved);
+        savePlots(viewingWorkId,plots);
+        renderPlots();
+      }
+    }
+  }
+  _plotDragActive=false;_plotTouchIdx=null;_plotTouchEl=null;
+  setTimeout(()=>{_plotDragActive=false;},100);
+}
+
+function openAddPlotModal(){
+  editingPlotId=null;
+  document.getElementById('plot-modal-title').textContent='場面を追加';
+  ['fp-chapter','fp-date','fp-place','fp-title','fp-body','fp-memo','fp-emotion'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.plot-emotion-btn').forEach(b=>b.classList.remove('selected'));
+  renderPlotCharChips([]);
+  document.getElementById('plot-delete-btn').style.display='none';
+  openModal('plot-modal');
+}
+
+function openEditPlotModal(idx){
+  const plots=getPlots(viewingWorkId);
+  const p=plots[idx];
+  if(!p)return;
+  editingPlotId=idx;
+  document.getElementById('plot-modal-title').textContent='場面を編集';
+  document.getElementById('fp-chapter').value=p.chapter||'';
+  document.getElementById('fp-date').value=p.date||p.label||'';
+  document.getElementById('fp-place').value=p.place||'';
+  document.getElementById('fp-title').value=p.title||'';
+  document.getElementById('fp-body').value=p.body||'';
+  document.getElementById('fp-memo').value=p.memo||'';
+  document.getElementById('fp-emotion').value=p.emotion||'';
+  document.querySelectorAll('.plot-emotion-btn').forEach(b=>b.classList.toggle('selected',b.dataset.val===p.emotion));
+  renderPlotCharChips(p.chars||[]);
+  document.getElementById('plot-delete-btn').style.display='';
+  openModal('plot-modal');
+}
+
+function savePlot(){
+  const body=document.getElementById('fp-body').value.trim();
+  if(!body){showToast('あらすじを入力してください');return;}
+  const data={
+    chapter:document.getElementById('fp-chapter').value.trim(),
+    date:document.getElementById('fp-date').value.trim(),
+    place:document.getElementById('fp-place').value.trim(),
+    title:document.getElementById('fp-title').value.trim(),
+    chars:[...document.querySelectorAll('.plot-char-chip.selected')].map(el=>el.dataset.name),
+    emotion:document.getElementById('fp-emotion').value,
+    body,
+    memo:document.getElementById('fp-memo').value.trim(),
+  };
+  const plots=getPlots(viewingWorkId);
+  if(editingPlotId!==null){
+    plots[editingPlotId]=data;
+  }else{
+    plots.push(data);
+  }
+  savePlots(viewingWorkId,plots);
+  closeModal('plot-modal');
+  renderPlots();
+}
+
+function deletePlotFromModal(){
+  if(editingPlotId===null)return;
+  showConfirm('削除の確認','この場面を削除しますか？',()=>{
+    const plots=getPlots(viewingWorkId);
+    plots.splice(editingPlotId,1);
+    savePlots(viewingWorkId,plots);
+    closeModal('plot-modal');
+    renderPlots();
+  });
 }
 
 // ============================================================
