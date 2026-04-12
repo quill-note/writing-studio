@@ -2975,6 +2975,13 @@ function renderPlotCharChips(selected){
   area.innerHTML=chars.map(c=>`<span class="plot-char-chip${selected.includes(c.name)?' selected':''}" data-name="${esc(c.name)}" onclick="this.classList.toggle('selected')">${esc(c.name)}</span>`).join('');
 }
 
+document.addEventListener('touchcancel', function(){
+  if(_plotTouchClone){_plotTouchClone.remove();_plotTouchClone=null;}
+  if(_plotTouchEl){_plotTouchEl.style.opacity='';_plotTouchEl=null;}
+  _plotDragActive=false;_plotTouchIdx=null;
+  document.querySelectorAll('.plot-card').forEach(c=>{c.style.borderColor='';c.style.boxShadow=''});
+});
+
 function initPlotDrag(){
   // タッチ長押し検出は ontouchstart で処理
 }
@@ -2986,8 +2993,6 @@ function plotDragStart(e,i){
 }
 function plotDragOver(e){
   e.preventDefault();e.dataTransfer.dropEffect='move';
-  const card=e.currentTarget;
-  card.style.borderColor='var(--primary)';
 }
 function plotDragEnd(e){
   document.querySelectorAll('.plot-card').forEach(c=>{c.style.opacity='';c.style.borderColor='';});
@@ -2995,6 +3000,7 @@ function plotDragEnd(e){
 }
 function plotDrop(e,targetIdx){
   e.preventDefault();
+  document.querySelectorAll('.plot-card').forEach(c=>{c.style.borderColor='';c.style.boxShadow=''});
   if(_plotDragIdx===null||_plotDragIdx===targetIdx)return;
   const plots=getPlots(viewingWorkId);
   const moved=plots.splice(_plotDragIdx,1)[0];
@@ -3044,21 +3050,24 @@ function plotTouchMove(e){
   _plotTouchClone.style.display='none';
   const el=document.elementFromPoint(t.clientX,t.clientY);
   _plotTouchClone.style.display='';
+  document.querySelectorAll('.plot-card').forEach(c=>{c.style.borderColor='';c.style.boxShadow=''});
   if(el){
     const card=el.closest('.plot-card');
-    document.querySelectorAll('.plot-card').forEach(c=>c.style.borderColor='');
-    if(card&&card!==_plotTouchEl)card.style.borderColor='var(--primary)';
+    if(card&&card!==_plotTouchEl){
+      card.style.borderColor='var(--primary)';
+      card.style.boxShadow='0 0 0 2px var(--primary-light)';
+    }
   }
 }
 function plotTouchEnd(e,i){
   clearTimeout(_plotLongPressTimer);
-  if(!_plotDragActive){_plotTouchIdx=null;return;}
-  const t=e.changedTouches[0];
+  // クローンを必ず削除
   if(_plotTouchClone){_plotTouchClone.remove();_plotTouchClone=null;}
-  if(_plotTouchEl){_plotTouchEl.style.opacity='';}
-  document.querySelectorAll('.plot-card').forEach(c=>c.style.borderColor='');
+  if(_plotTouchEl){_plotTouchEl.style.opacity='';_plotTouchEl=null;}
+  document.querySelectorAll('.plot-card').forEach(c=>{c.style.borderColor='';c.style.boxShadow=''});
+  if(!_plotDragActive){_plotDragActive=false;_plotTouchIdx=null;return;}
+  const t=e.changedTouches[0];
   // ドロップ先を特定
-  _plotTouchClone=null;
   const el2=document.elementFromPoint(t.clientX,t.clientY);
   if(el2){
     const card=el2.closest('.plot-card');
