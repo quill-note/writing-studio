@@ -213,6 +213,26 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .plot-card-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
 .plot-card-body { font-size: 13px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; }
 .plot-card-memo { font-size: 12px; color: var(--primary-dark); background: var(--primary-pale); border-radius: 8px; padding: 6px 10px; margin-top: 8px; white-space: pre-wrap; line-height: 1.6; }
+.plot-fab {
+  position: fixed; right: 20px; bottom: 80px; z-index: 500;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  border: none; cursor: pointer; display: none;
+  align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  font-size: 28px; font-family: inherit;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.plot-fab:hover { transform: scale(1.08); box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+.plot-chapter-add-btn {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--primary); background: none;
+  border: none; padding: 4px 2px; cursor: pointer;
+  font-family: inherit; font-weight: 600; margin-top: 8px;
+  opacity: 0.7;
+}
+.plot-chapter-add-btn:hover { opacity: 1; }
+.plot-chapter-add-btn .mi { font-size: 14px; }
 .plot-add-btn { width: 100%; padding: 12px; border: 2px dashed var(--primary-light); border-radius: 14px; background: var(--primary-pale); color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; font-family: inherit; }
 .plot-add-btn:hover { background: var(--primary-light); }
 .plot-empty { text-align: center; padding: 40px 16px; color: var(--text3); font-size: 13px; }
@@ -847,6 +867,11 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
   </div>
 </div>
 
+<!-- プロット追加フローティングボタン -->
+<button class="plot-fab" id="plot-fab" onclick="openAddPlotModal()">
+  <span class="mi" style="font-size:24px">add</span>
+</button>
+
 <!-- ========== ナビゲーション ========== -->
 <nav class="bottom-nav">
   <button class="nav-item active" id="nav-works" onclick="showPage('page-works')">
@@ -1476,6 +1501,7 @@ function showWorkDetail(id,pushHistory=true) {
   document.querySelectorAll('.work-detail-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.work-detail-tab')[0].classList.add('active');
   document.getElementById('work-detail-panel-info').classList.add('active');
+  const fab=document.getElementById('plot-fab');if(fab)fab.style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-work-detail').classList.add('active');
   window.scrollTo(0,0);
@@ -2701,6 +2727,8 @@ function switchWorkTab(tab,btn){
   btn.classList.add('active');
   document.getElementById('work-detail-panel-'+tab).classList.add('active');
   window.scrollTo(0,0);
+  const fab=document.getElementById('plot-fab');
+  if(fab)fab.style.display=tab==='plot'?'flex':'none';
   if(tab==='plot') renderPlots();
 }
 
@@ -2753,15 +2781,30 @@ function renderPlots(){
     if(!grouped[ch])grouped[ch]=[];
     grouped[ch].push({p,i});
   });
+  // 章の順序を保持
+  const seenCh=new Set();
+  const chapterOrder=[];
+  plots.forEach(p=>{const ch=p.chapter||'';if(!seenCh.has(ch)){seenCh.add(ch);chapterOrder.push(ch);}});
   let html='';
-  Object.entries(grouped).forEach(([ch,items])=>{
-    if(ch)html+=`<div class="plot-chapter-header" onclick="editChapterName('${ch.replace(/'/g,"\\'")}')"><span class="mi mi-sm">bookmark</span>${esc(ch)}<span class="mi" style="font-size:14px;margin-left:auto;color:var(--text3)">edit</span></div>`;
+  chapterOrder.forEach(ch=>{
+    const items=grouped[ch]||[];
+    if(ch){
+      html+=`<button class="plot-chapter-add-btn" onclick="openAddPlotModalWithChapter('${ch.replace(/'/g,"\\'")}')"><span class="mi" style="font-size:14px">add</span>${esc(ch)}に追加</button>`;
+      html+=`<div class="plot-chapter-header" onclick="editChapterName('${ch.replace(/'/g,"\\'")}')"><span class="mi mi-sm">bookmark</span>${esc(ch)}<span class="mi" style="font-size:14px;margin-left:auto;color:var(--text3)">edit</span></div>`;
+    }
     html+=items.map(({p,i})=>cards[i]).join('');
   });
   el.innerHTML='';
   el.innerHTML=html;
   initPlotDrag();
   renderPlotGraph(plots, _plotGraphChapter);
+  // 色付け対象があれば再適用
+  if(_highlightCardIdx!==null){
+    setTimeout(()=>{
+      const card=document.getElementById('plot-card-'+_highlightCardIdx);
+      if(card){card.style.borderColor='var(--primary)';card.style.boxShadow='0 0 0 2px var(--primary-light)';}
+    },50);
+  }
 }
 
 let _plotGraphChapter = null;
@@ -2940,7 +2983,7 @@ function plotGraphFilter(chapter){
   // フィルター後もリスト側は全体表示のまま
 }
 
-let _plotDragIdx=null,_plotTouchIdx=null,_plotTouchEl=null,_plotTouchClone=null,_plotLongPressTimer=null,_plotDragActive=false;
+let _plotDragIdx=null,_plotTouchIdx=null,_plotTouchEl=null,_plotTouchClone=null,_plotLongPressTimer=null,_plotDragActive=false,_highlightCardIdx=null;
 
 function plotCardClick(e,i){
   if(_plotDragActive)return;
@@ -3089,13 +3132,20 @@ function plotTouchEnd(e,i){
         }else if(prev&&prev.chapter&&prev.chapter!==moved.chapter){
           moved.chapter=prev.chapter;
         }
+        _highlightCardIdx=targetIdx;
         savePlots(viewingWorkId,plots);
         renderPlots();
+        setTimeout(()=>{_highlightCardIdx=null;},1500);
       }
     }
   }
   _plotDragActive=false;_plotTouchIdx=null;_plotTouchEl=null;_plotTouchClone=null;
   setTimeout(()=>{_plotDragActive=false;},50);
+}
+
+function openAddPlotModalWithChapter(chapter){
+  openAddPlotModal();
+  document.getElementById('fp-chapter').value=chapter;
 }
 
 function openAddPlotModal(){
