@@ -2789,21 +2789,27 @@ function renderPlots(){
   chapterOrder.forEach(ch=>{
     const items=grouped[ch]||[];
     if(ch){
-      html+=`<button class="plot-chapter-add-btn" onclick="openAddPlotModalWithChapter('${ch.replace(/'/g,"\\'")}')"><span class="mi" style="font-size:14px">add</span>${esc(ch)}に追加</button>`;
       html+=`<div class="plot-chapter-header" onclick="editChapterName('${ch.replace(/'/g,"\\'")}')"><span class="mi mi-sm">bookmark</span>${esc(ch)}<span class="mi" style="font-size:14px;margin-left:auto;color:var(--text3)">edit</span></div>`;
     }
     html+=items.map(({p,i})=>cards[i]).join('');
+    if(ch){
+      html+=`<button class="plot-chapter-add-btn" onclick="openAddPlotModalWithChapter('${ch.replace(/'/g,"\\'")}')"><span class="mi" style="font-size:14px">add</span>${esc(ch)}に追加</button>`;
+    }
   });
-  el.innerHTML='';
-  el.innerHTML=html;
   initPlotDrag();
   renderPlotGraph(plots, _plotGraphChapter);
   // 色付け対象があれば再適用
   if(_highlightCardIdx!==null){
+    const hIdx=_highlightCardIdx;
     setTimeout(()=>{
-      const card=document.getElementById('plot-card-'+_highlightCardIdx);
-      if(card){card.style.borderColor='var(--primary)';card.style.boxShadow='0 0 0 2px var(--primary-light)';}
-    },50);
+      const card=document.getElementById('plot-card-'+hIdx);
+      if(card){
+        card.style.borderColor='var(--primary)';
+        card.style.boxShadow='0 0 0 2px var(--primary-light)';
+        card.scrollIntoView({behavior:'smooth',block:'nearest'});
+        setTimeout(()=>{card.style.borderColor='';card.style.boxShadow='';},1500);
+      }
+    },100);
   }
 }
 
@@ -3043,7 +3049,7 @@ function plotDragOver(e){
   e.preventDefault();e.dataTransfer.dropEffect='move';
 }
 function plotDragEnd(e){
-  document.querySelectorAll('.plot-card').forEach(c=>{c.style.opacity='';c.style.borderColor='';});
+  document.querySelectorAll('.plot-card').forEach(c=>{c.style.opacity='';c.style.borderColor='';c.style.boxShadow='';c.style.background='';});
   _plotDragIdx=null;
 }
 function plotDrop(e,targetIdx){
@@ -3113,34 +3119,35 @@ function plotTouchEnd(e,i){
   if(_plotTouchClone){_plotTouchClone.remove();_plotTouchClone=null;}
   if(_plotTouchEl){_plotTouchEl.style.opacity='';_plotTouchEl=null;}
   document.querySelectorAll('.plot-card').forEach(c=>{c.style.borderColor='';c.style.boxShadow=''});
-  if(!_plotDragActive){_plotDragActive=false;_plotTouchIdx=null;return;}
+  const fromIdx=_plotTouchIdx;
+  _plotDragActive=false;_plotTouchIdx=null;_plotTouchEl=null;_plotTouchClone=null;
+  if(fromIdx===null)return;
   const t=e.changedTouches[0];
-  // ドロップ先を特定
+  // ドロップ先を特定（chapter-add-btnなど非カード要素も考慮して祖先を辿る）
   const el2=document.elementFromPoint(t.clientX,t.clientY);
   if(el2){
     const card=el2.closest('.plot-card');
     if(card&&card.dataset.idx!==undefined){
       const targetIdx=+card.dataset.idx;
-      if(targetIdx!==_plotTouchIdx){
+      if(targetIdx!==fromIdx){
         const plots=getPlots(viewingWorkId);
-        const moved=plots.splice(_plotTouchIdx,1)[0];
-        plots.splice(targetIdx,0,moved);
-        const prev=plots[targetIdx-1];
-        const next=plots[targetIdx+1];
+        const moved=plots.splice(fromIdx,1)[0];
+        const insertAt=targetIdx>fromIdx?targetIdx-1:targetIdx;
+        plots.splice(insertAt,0,moved);
+        const prev=plots[insertAt-1];
+        const next=plots[insertAt+1];
         if(prev&&next&&prev.chapter===next.chapter&&prev.chapter!==moved.chapter){
           moved.chapter=prev.chapter;
         }else if(prev&&prev.chapter&&prev.chapter!==moved.chapter){
           moved.chapter=prev.chapter;
         }
-        _highlightCardIdx=targetIdx;
+        _highlightCardIdx=insertAt;
         savePlots(viewingWorkId,plots);
         renderPlots();
         setTimeout(()=>{_highlightCardIdx=null;},1500);
       }
     }
   }
-  _plotDragActive=false;_plotTouchIdx=null;_plotTouchEl=null;_plotTouchClone=null;
-  setTimeout(()=>{_plotDragActive=false;},50);
 }
 
 function openAddPlotModalWithChapter(chapter){
