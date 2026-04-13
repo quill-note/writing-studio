@@ -2796,6 +2796,8 @@ function renderPlots(){
       html+=`<button class="plot-chapter-add-btn" onclick="openAddPlotModalWithChapter('${ch.replace(/'/g,"\\'")}')"><span class="mi" style="font-size:14px">add</span>${esc(ch)}に追加</button>`;
     }
   });
+  el.innerHTML='';
+  el.innerHTML=html;
   initPlotDrag();
   renderPlotGraph(plots, _plotGraphChapter);
   // 色付け対象があれば再適用
