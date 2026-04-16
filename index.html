@@ -292,6 +292,35 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
 
+/* ========== 分析 ========== */
+.analyze-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 12px;
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.analyze-card-title {
+  font-size: 12px; font-weight: 700; color: var(--text3);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.analyze-value {
+  font-size: 28px; font-weight: 700; color: var(--primary-dark);
+  line-height: 1;
+}
+.analyze-value-unit { font-size: 13px; font-weight: 400; color: var(--text3); margin-left: 4px; }
+.analyze-note { font-size: 11px; color: var(--text3); margin-top: 6px; line-height: 1.6; }
+.analyze-bar-wrap { height: 8px; background: var(--border); border-radius: 4px; margin: 8px 0 4px; overflow: hidden; }
+.analyze-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; background: var(--primary); }
+.analyze-tag {
+  display: inline-block; font-size: 12px; padding: 4px 12px;
+  border-radius: 12px; background: var(--primary-pale);
+  color: var(--primary-dark); font-weight: 700; margin-right: 6px; margin-bottom: 4px;
+}
+.analyze-word-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.analyze-word-chip {
+  font-size: 12px; padding: 3px 10px; border-radius: 10px;
+  background: var(--surface2); color: var(--text2); border: 1px solid var(--border);
+}
+
 /* ========== 執筆補助タブ ========== */
 .writing-page { padding: 0 0 20px; }
 .writing-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); background: var(--surface); overflow-x: auto; scrollbar-width: none; }
@@ -681,6 +710,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
         <button class="wtab-btn active" data-wtab="editor"><span class="mi mi-sm">edit</span>エディタ</button>
         <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">search</span>推敲</button>
         <button class="wtab-btn" data-wtab="split"><span class="mi mi-sm">content_cut</span>投稿用分割</button>
+        <button class="wtab-btn" data-wtab="analyze"><span class="mi mi-sm">bar_chart</span>分析</button>
       </div>
     </div>
   </div>
@@ -860,6 +890,16 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
           <button class="btn btn-secondary btn-sm" onclick="ncClearSplit()" style="color:#c9584a;border-color:#f0d5d1"><span class="mi mi-xs">delete_outline</span>クリア</button>
         </div>
       </div>
+
+    <div class="wtab-panel" id="wtab-analyze">
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">分析したいテキストをエディタに貼り付けて「分析する」を押してください</div>
+        <button class="btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="runAnalyze()">
+          <span class="mi mi-sm">bar_chart</span>分析する
+        </button>
+      </div>
+      <div id="analyze-result"></div>
+    </div>
       <div class="split-results" id="nc-spRes"><p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p></div>
     </div>
 
@@ -2788,12 +2828,13 @@ function renderPlots(){
   let html='';
   chapterOrder.forEach(ch=>{
     const items=grouped[ch]||[];
+    const chEsc=ch.replace(/'/g,"\\'");
     if(ch){
-      html+=`<div class="plot-chapter-header" onclick="editChapterName('${ch.replace(/'/g,"\\'")}')"><span class="mi mi-sm">bookmark</span>${esc(ch)}<span class="mi" style="font-size:14px;margin-left:auto;color:var(--text3)">edit</span></div>`;
+      html+=`<div class="plot-chapter-header" onclick="editChapterName('${chEsc}')"><span class="mi mi-sm">bookmark</span>${esc(ch)}<span class="mi" style="font-size:14px;margin-left:auto;color:var(--text3)">edit</span></div>`;
     }
     html+=items.map(({p,i})=>cards[i]).join('');
     if(ch){
-      html+=`<button class="plot-chapter-add-btn" onclick="openAddPlotModalWithChapter('${ch.replace(/'/g,"\\'")}')"><span class="mi" style="font-size:14px">add</span>${esc(ch)}に追加</button>`;
+      html+=`<button class="plot-chapter-add-btn" onclick="openAddPlotModalWithChapter('${chEsc}')"><span class="mi" style="font-size:14px">add</span>${esc(ch)}に追加</button>`;
     }
   });
   el.innerHTML='';
@@ -3134,7 +3175,7 @@ function plotTouchEnd(e,i){
       if(targetIdx!==fromIdx){
         const plots=getPlots(viewingWorkId);
         const moved=plots.splice(fromIdx,1)[0];
-        const insertAt=targetIdx>fromIdx?targetIdx-1:targetIdx;
+        const insertAt=targetIdx;
         plots.splice(insertAt,0,moved);
         const prev=plots[insertAt-1];
         const next=plots[insertAt+1];
@@ -3219,6 +3260,109 @@ function deletePlotFromModal(){
     closeModal('plot-modal');
     renderPlots();
   });
+}
+
+// ============================================================
+// テキスト分析
+// ============================================================
+function runAnalyze(){
+  const text = document.getElementById('nc-src')?.value || '';
+  if(!text.trim()){showToast('エディタにテキストを入力してください');return;}
+  const result = analyzeText(text);
+  renderAnalyzeResult(result);
+}
+
+function analyzeText(text){
+  const total = text.length;
+  const noNewline = text.replace(/\n/g,'').length;
+  const lines = text.split('\n').length;
+
+  // 会話率（「」で囲まれた文字）
+  const dialogMatch = text.match(/「[^」]*」/g)||[];
+  const dialogChars = dialogMatch.reduce((s,m)=>s+m.length,0);
+  const dialogRate = noNewline>0 ? (dialogChars/noNewline*100) : 0;
+
+  // 指示語率（これ・それ・あれ・どれ等）
+  const shiji = (text.match(/[こそあど][れのにをはがでもなか]|これ|それ|あれ|どれ|ここ|そこ|あそこ|どこ/g)||[]);
+  const shijiRate = noNewline>0 ? (shiji.length / (noNewline/100)) : 0;
+
+  // 漢字率
+  const kanjiCount = (text.match(/[\u4e00-\u9faf]/g)||[]).length;
+  const kanjiRate = noNewline>0 ? (kanjiCount/noNewline*100) : 0;
+
+  // 平均文長
+  const sentences = text.split(/[\u3002\uff01\uff1f]|\n/).filter(s=>s.trim().length>2);
+  const avgSentLen = sentences.length>0 ? sentences.reduce((s,m)=>s+m.length,0)/sentences.length : 0;
+
+  // 読みやすさスコア（漢字率・文長・指示語率から）
+  let readScore = 100;
+  if(kanjiRate>40) readScore -= (kanjiRate-40)*0.8;
+  if(avgSentLen>40) readScore -= (avgSentLen-40)*0.5;
+  if(shijiRate>2) readScore -= (shijiRate-2)*5;
+  readScore = Math.max(0, Math.min(100, readScore));
+
+  // 頻出単語（名詞っぽい2文字以上の語）
+  const wordMap = {};
+  const words = text.match(/[\u4e00-\u9fafぁ-んァ-ヶa-zA-Z]{2,6}/g)||[];
+  const stopWords = new Set(['という','ことが','ために','として','について','ような','ように','あった','いった','なった','してい','している','された','される','できる','できた','いない','いる','ある','ない','する','した','いた','いて','から','まで','より','また','そして','しかし','ただし','つまり','なので','けれど','ところ']);
+  words.forEach(w=>{
+    if(w.length>=2&&!stopWords.has(w)){wordMap[w]=(wordMap[w]||0)+1;}
+  });
+  const topWords = Object.entries(wordMap).sort((a,b)=>b[1]-a[1]).slice(0,15).filter(([w,c])=>c>=2);
+
+  // 文章タイプ診断
+  let type='', typeNote='';
+  if(dialogRate>=50){type='会話中心型';typeNote='セリフが多く、テンポよく読める作品です。';}
+  else if(dialogRate>=30){type='バランス型';typeNote='会話と地の文のバランスが取れた読みやすい構成です。';}
+  else if(dialogRate>=15){type='描写重視型';typeNote='地の文が多く、心理描写や情景描写が豊かな作品です。';}
+  else{type='文学・叙述型';typeNote='ほぼ地の文で構成された、文学的な作品です。';}
+
+  return {total,noNewline,lines,dialogRate,shijiRate,kanjiRate,avgSentLen,readScore,topWords,type,typeNote};
+}
+
+function renderAnalyzeResult(r){
+  const el=document.getElementById('analyze-result');
+  if(!el)return;
+
+  const dialogColor = r.dialogRate>=20&&r.dialogRate<=50 ? 'var(--primary)' : r.dialogRate<10 ? '#e87b6b' : 'var(--primary)';
+  const readColor = r.readScore>=70 ? 'var(--primary)' : r.readScore>=50 ? '#e8a090' : '#e87b6b';
+  const readLabel = r.readScore>=80?'読みやすい':r.readScore>=60?'やや読みやすい':r.readScore>=40?'普通':'改善の余地あり';
+
+  el.innerHTML = `
+    <div class="analyze-card">
+      <div class="analyze-card-title"><span class="mi mi-sm">format_size</span>文字数</div>
+      <div style="display:flex;gap:16px;align-items:flex-end">
+        <div><div class="analyze-value">${r.noNewline.toLocaleString()}<span class="analyze-value-unit">字</span></div><div class="analyze-note">改行除く</div></div>
+        <div><div style="font-size:18px;font-weight:700;color:var(--text2)">${r.total.toLocaleString()}<span class="analyze-value-unit">字</span></div><div class="analyze-note">改行含む</div></div>
+        <div><div style="font-size:18px;font-weight:700;color:var(--text2)">${(r.noNewline/400).toFixed(1)}<span class="analyze-value-unit">枚</span></div><div class="analyze-note">原稿用紙換算</div></div>
+      </div>
+    </div>
+
+    <div class="analyze-card">
+      <div class="analyze-card-title"><span class="mi mi-sm">chat_bubble_outline</span>会話率</div>
+      <div class="analyze-value" style="color:${dialogColor}">${r.dialogRate.toFixed(1)}<span class="analyze-value-unit">%</span></div>
+      <div class="analyze-bar-wrap"><div class="analyze-bar" style="width:${Math.min(r.dialogRate,100)}%;background:${dialogColor}"></div></div>
+      <div class="analyze-note">目安：20〜35%が標準的な小説 / 35〜50%がライトノベル寄り</div>
+    </div>
+
+    <div class="analyze-card">
+      <div class="analyze-card-title"><span class="mi mi-sm">visibility</span>読みやすさ</div>
+      <div class="analyze-value" style="color:${readColor}">${Math.round(r.readScore)}<span class="analyze-value-unit">/ 100</span></div>
+      <div class="analyze-bar-wrap"><div class="analyze-bar" style="width:${r.readScore}%;background:${readColor}"></div></div>
+      <div class="analyze-note">${readLabel}（漢字率${r.kanjiRate.toFixed(1)}% / 平均文長${r.avgSentLen.toFixed(1)}字 / 指示語率${r.shijiRate.toFixed(2)}%）</div>
+    </div>
+
+    <div class="analyze-card">
+      <div class="analyze-card-title"><span class="mi mi-sm">auto_stories</span>文章タイプ</div>
+      <div><span class="analyze-tag">${r.type}</span></div>
+      <div class="analyze-note" style="margin-top:8px">${r.typeNote}</div>
+    </div>
+
+    ${r.topWords.length?`<div class="analyze-card">
+      <div class="analyze-card-title"><span class="mi mi-sm">sort</span>頻出単語 TOP${r.topWords.length}</div>
+      <div class="analyze-word-list">${r.topWords.map(([w,c])=>`<span class="analyze-word-chip">${esc(w)} <b>${c}</b></span>`).join('')}</div>
+    </div>`:''}
+  `;
 }
 
 // ============================================================
