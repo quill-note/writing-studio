@@ -101,7 +101,7 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .tag-site { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--tag-bg); color: var(--tag-text); }
 
 /* ナビゲーション */
-.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 2px solid var(--border); display: flex; z-index: 100; box-shadow: 0 -2px 10px var(--shadow); }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 2px solid var(--border); display: flex; z-index: 200; box-shadow: 0 -2px 10px var(--shadow); }
 .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 4px; cursor: pointer; border: none; background: none; color: var(--text3); font-size: 10px; gap: 2px; transition: color 0.2s; }
 .nav-item.active { color: var(--primary); }
 .nav-icon { font-size: 22px; }
@@ -299,25 +299,24 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
   box-shadow: 0 2px 6px var(--shadow);
 }
 .analyze-card-title {
-  font-size: 12px; font-weight: 700; color: var(--text3);
-  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 5px; text-transform: none;
 }
 .analyze-value {
-  font-size: 28px; font-weight: 700; color: var(--primary-dark);
-  line-height: 1;
+  font-size: 26px; font-weight: 700; color: var(--primary-dark); line-height: 1;
 }
-.analyze-value-unit { font-size: 13px; font-weight: 400; color: var(--text3); margin-left: 4px; }
+.analyze-value-unit { font-size: 12px; font-weight: 400; color: var(--text3); margin-left: 3px; }
 .analyze-note { font-size: 11px; color: var(--text3); margin-top: 6px; line-height: 1.6; }
-.analyze-bar-wrap { height: 8px; background: var(--border); border-radius: 4px; margin: 8px 0 4px; overflow: hidden; }
-.analyze-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; background: var(--primary); }
+.analyze-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; margin: 8px 0 4px; overflow: hidden; }
+.analyze-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; background: var(--primary); }
 .analyze-tag {
-  display: inline-block; font-size: 12px; padding: 4px 12px;
-  border-radius: 12px; background: var(--primary-pale);
-  color: var(--primary-dark); font-weight: 700; margin-right: 6px; margin-bottom: 4px;
+  display: inline-block; font-size: 12px; padding: 3px 10px;
+  border-radius: 10px; background: var(--primary-pale);
+  color: var(--primary-dark); font-weight: 700; margin-right: 4px; margin-bottom: 4px;
 }
-.analyze-word-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.analyze-word-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .analyze-word-chip {
-  font-size: 12px; padding: 3px 10px; border-radius: 10px;
+  font-size: 11px; padding: 2px 8px; border-radius: 8px;
   background: var(--surface2); color: var(--text2); border: 1px solid var(--border);
 }
 
@@ -709,8 +708,8 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
       <div class="writing-tabs" style="margin:0 -16px -10px;padding:0 16px;overflow-x:auto;scrollbar-width:none;border-bottom:none;background:transparent;flex:1">
         <button class="wtab-btn active" data-wtab="editor"><span class="mi mi-sm">edit</span>エディタ</button>
         <button class="wtab-btn" data-wtab="check"><span class="mi mi-sm">search</span>推敲</button>
-        <button class="wtab-btn" data-wtab="split"><span class="mi mi-sm">content_cut</span>投稿用分割</button>
         <button class="wtab-btn" data-wtab="analyze"><span class="mi mi-sm">bar_chart</span>分析</button>
+        <button class="wtab-btn" data-wtab="split"><span class="mi mi-sm">content_cut</span>投稿用分割</button>
       </div>
     </div>
   </div>
@@ -890,17 +889,15 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
           <button class="btn btn-secondary btn-sm" onclick="ncClearSplit()" style="color:#c9584a;border-color:#f0d5d1"><span class="mi mi-xs">delete_outline</span>クリア</button>
         </div>
       </div>
+      <div class="split-results" id="nc-spRes"><p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p></div>
+    </div>
 
     <div class="wtab-panel" id="wtab-analyze">
       <div style="margin-bottom:12px">
         <div style="font-size:12px;color:var(--text3);margin-bottom:8px">分析したいテキストをエディタに貼り付けて「分析する」を押してください</div>
-        <button class="btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="runAnalyze()">
-          <span class="mi mi-sm">bar_chart</span>分析する
-        </button>
+        <button class="btn btn-primary btn-sm" onclick="runAnalyze()"><span class="mi mi-xs">bar_chart</span>分析する</button>
       </div>
       <div id="analyze-result"></div>
-    </div>
-      <div class="split-results" id="nc-spRes"><p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p></div>
     </div>
 
 
@@ -3266,13 +3263,27 @@ function deletePlotFromModal(){
 // テキスト分析
 // ============================================================
 function runAnalyze(){
-  const text = document.getElementById('nc-src')?.value || '';
+  const text = document.getElementById('nc-srcEditor')?.value || '';
   if(!text.trim()){showToast('エディタにテキストを入力してください');return;}
-  const result = analyzeText(text);
+  // 登録済みキャラ名を収集
+  const charNames = characters.flatMap(c=>{
+    const names = [c.name];
+    // スペース区切りで分割
+    if(c.name.includes(' ')) names.push(...c.name.split(' '));
+    if(c.name.includes('　')) names.push(...c.name.split('　'));
+    // スペースなし4文字なら前2文字・後2文字（苗字・名前）に分割
+    const n = c.name.replace(/[\s　]/g,'');
+    if(n.length===4) names.push(n.slice(0,2), n.slice(2,4));
+    if(n.length===3) names.push(n.slice(0,2), n.slice(1,3));
+    // ふりがながあれば除外（c.kanaがあれば追加）
+    if(c.kana) names.push(c.kana);
+    return names.filter(n=>n.length>=2);
+  });
+  const result = analyzeText(text, charNames);
   renderAnalyzeResult(result);
 }
 
-function analyzeText(text){
+function analyzeText(text, charNames=[]){
   const total = text.length;
   const noNewline = text.replace(/\n/g,'').length;
   const lines = text.split('\n').length;
@@ -3304,12 +3315,46 @@ function analyzeText(text){
   // 頻出単語（名詞っぽい2文字以上の語）
   const wordMap = {};
   const words = text.match(/[\u4e00-\u9fafぁ-んァ-ヶa-zA-Z]{2,6}/g)||[];
-  const stopWords = new Set(['という','ことが','ために','として','について','ような','ように','あった','いった','なった','してい','している','された','される','できる','できた','いない','いる','ある','ない','する','した','いた','いて','から','まで','より','また','そして','しかし','ただし','つまり','なので','けれど','ところ']);
-  words.forEach(w=>{
-    if(w.length>=2&&!stopWords.has(w)){wordMap[w]=(wordMap[w]||0)+1;}
-  });
-  const topWords = Object.entries(wordMap).sort((a,b)=>b[1]-a[1]).slice(0,15).filter(([w,c])=>c>=2);
+  const stopWords = new Set([
+  ...charNames,
+  // 1人称・2人称
+  '俺','僕','私','あたし','わたし','ぼく','おれ','自分','あなた','きみ','君','おまえ','お前',
+  '俺は','僕は','私は','俺が','僕が','俺の','僕の',
+  // 接続・助詞
+  'から','まで','より','また','そして','しかし','ただし','つまり','なので','けれど','ところ',
+  'という','ことが','ために','として','について','ような','ように','ことは','ことを','ことに',
+  'だから','だけど','だって','でも','けれども','それで','それに','それが','じゃあ','じゃ',
+  'だろう','だろか','だろうか','たのに','だよね','だよ','かな','かも','かもしれ',
+  // 語尾・フレーズ
+  'った','ってい','ていく','てくる','てしまう','ておく','てある','てみる','しまった',
+  'うん','けど','って','まった','かった','うわ','っと','ったから','ったけど',
+  'てる','てた','てい','です','ます','でし','まし','あっという間','あっとい',
+  // 補助動詞・形式名詞
+  'いる','ある','ない','する','した','いた','いて','なる','くる','いく',
+  'あった','いった','なった','している','された','される','できる','できた','いない',
+  'れる','られる','させる','もの','こと','とき','ため','よう','らしい',
+  'ごめん','ありがとう','えっ','いいよ','てね',
+]);
 
+
+  // キャラ名の部分一致チェック用リスト
+  const charNameList = [...charNames];
+  const honorifics = ['くんは','くんが','くんを','くんの','くんと','くんで','くんも','くん',
+    'さんは','さんが','さんを','さんの','さんと','さんで','さんも','さん',
+    'ちゃんは','ちゃんが','ちゃんを','ちゃんの','ちゃんと','ちゃんで','ちゃんも','ちゃん'];
+  words.forEach(w=>{
+    if(w.length<2) return;
+    if(stopWords.has(w)) return;
+    if(/^[ぁ-ん]{1,2}$/.test(w)) return;
+    // 敬称を取り除いた形でキャラ名と照合
+    let wStrip = w;
+    for(const h of honorifics){ if(wStrip.endsWith(h)){wStrip=wStrip.slice(0,-h.length);break;} }
+    // 前置きの助詞も除去
+    for(const p of ['と','が','は','を','の','に','で','も','へ','から']){ if(wStrip.startsWith(p)&&wStrip.length>2){wStrip=wStrip.slice(p.length);break;} }
+    if(charNameList.some(n=>n.length>=2&&(w.includes(n)||wStrip===n||wStrip.includes(n)))) return;
+    wordMap[w]=(wordMap[w]||0)+1;
+  });
+  const topWords = Object.entries(wordMap).sort((a,b)=>b[1]-a[1]).slice(0,10).filter(([w,c])=>c>=2);
   // 文章タイプ診断
   let type='', typeNote='';
   if(dialogRate>=50){type='会話中心型';typeNote='セリフが多く、テンポよく読める作品です。';}
@@ -3317,7 +3362,20 @@ function analyzeText(text){
   else if(dialogRate>=15){type='描写重視型';typeNote='地の文が多く、心理描写や情景描写が豊かな作品です。';}
   else{type='文学・叙述型';typeNote='ほぼ地の文で構成された、文学的な作品です。';}
 
-  return {total,noNewline,lines,dialogRate,shijiRate,kanjiRate,avgSentLen,readScore,topWords,type,typeNote};
+  // 副詞の頻出
+  const adverbs = ['すごく','すごい','とても','とっても','かなり','少し','ちょっと','もっと','ずっと',
+    'やっぱ','やっぱり','なんか','なんだか','なんとなく','どうも','どうか','ちゃんと','しっかり',
+    'ふと','じっと','ぼんやり','そっと','ゆっくり','はっきり','きっと','たぶん','もしかして',
+    'いつも','たまに','また','もう','まだ','ようやく','やっと','急に','突然','いきなり'];
+  const adverbCount = {};
+  adverbs.forEach(a=>{
+    const re = new RegExp(a, 'g');
+    const cnt = (text.match(re)||[]).length;
+    if(cnt>=2) adverbCount[a]=cnt;
+  });
+  const topAdverbs = Object.entries(adverbCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  return {total,noNewline,lines,dialogRate,shijiRate,kanjiRate,avgSentLen,readScore,topWords,topAdverbs,type,typeNote};
 }
 
 function renderAnalyzeResult(r){
@@ -3359,8 +3417,13 @@ function renderAnalyzeResult(r){
     </div>
 
     ${r.topWords.length?`<div class="analyze-card">
-      <div class="analyze-card-title"><span class="mi mi-sm">sort</span>頻出単語 TOP${r.topWords.length}</div>
+      <div class="analyze-card-title"><span class="mi mi-sm">sort</span>頻出単語 TOP10</div>
       <div class="analyze-word-list">${r.topWords.map(([w,c])=>`<span class="analyze-word-chip">${esc(w)} <b>${c}</b></span>`).join('')}</div>
+    </div>`:''}
+  ${r.topAdverbs&&r.topAdverbs.length?`<div class="analyze-card">
+      <div class="analyze-card-title"><span class="mi mi-sm">format_italic</span>副詞の頻出 TOP${r.topAdverbs.length}</div>
+      <div class="analyze-note" style="margin-bottom:8px">多用すると説明的・冗長になりやすい副詞です</div>
+      <div class="analyze-word-list">${r.topAdverbs.map(([w,c])=>`<span class="analyze-word-chip">${esc(w)} <b>${c}</b></span>`).join('')}</div>
     </div>`:''}
   `;
 }
