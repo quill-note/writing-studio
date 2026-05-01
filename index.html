@@ -2673,12 +2673,18 @@ function ncRunSplit(){
   }
   const resEl=document.getElementById('nc-spRes');
   if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
+  window._ncSplitParts=parts;
   resEl.innerHTML=parts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
-    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(p)});ncToast('コピーしました')"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
+    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button class="btn btn-secondary btn-sm" onclick="ncCopyPart(${i})"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
   }).join('');
 }
-function ncClearSplit(){document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
+function ncCopyPart(i){
+  const p=(window._ncSplitParts||[])[i];
+  if(p==null){ncToast('コピーに失敗しました');return;}
+  navigator.clipboard.writeText(p).then(()=>ncToast('コピーしました')).catch(()=>ncToast('コピーに失敗しました'));
+}
+function ncClearSplit(){window._ncSplitParts=[];document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
 
 // toast（novel-craft）
 function ncToast(msg){
