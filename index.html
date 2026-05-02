@@ -412,6 +412,11 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
 .split-card-header span { font-size: 11px; color: var(--text3); }
 .split-card pre { font-family: var(--font-mincho); font-size: 13px; line-height: 1.9; white-space: pre-wrap; word-wrap: break-word; max-height: 280px; overflow-y: auto; color: var(--text2); }
 .split-ellipsis { text-align: center; color: var(--text3); padding: 12px 0; font-size: 12px; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); margin: 4px 0; }
+.split-card.copied { border-color: var(--success); background: #f0faf5; }
+.split-card.copied .split-card-header h4 { color: var(--success); }
+.split-copied-badge { display: none; font-size: 11px; color: var(--success); font-weight: 600; align-items: center; gap: 3px; }
+.split-card.copied .split-copied-badge { display: flex; }
+.split-card.copied .btn-copy-part { background: var(--success); color: #fff; border-color: var(--success); }
 
 /* アコーディオンカード */
 .accordion-card {
@@ -2657,32 +2662,77 @@ function ncSetSM(mode,btn){
   document.getElementById('nc-spCntF').style.display=mode==='count'?'':'none';
   document.getElementById('nc-spDlmF').style.display=mode==='delim'?'':'none';
 }
+function ncEndsWithDialog(text){
+  // 末尾の空行を除いた最後の行を取得
+  const lines=text.split('\n');
+  for(let i=lines.length-1;i>=0;i--){
+    const l=lines[i].trim();if(!l) continue;
+    // 台詞で終わっているか（」』）で終わる行）
+    return /[」』）]$/.test(l)||/^「/.test(l);
+  }
+  return false;
+}
 function ncRunSplit(){
   const text=document.getElementById('nc-srcEditor').value;if(!text.trim()){showToast('エディタにテキストを貼り付けてください');return;}
   let parts=[];
   if(ncSplitMode==='chars'){
     const maxChars=parseInt(document.getElementById('nc-spChr').value)||1500;
-    const paragraphs=text.split(/\n\n+/);let current='';
-    paragraphs.forEach(p=>{if(!p.trim()) return;if(current&&(current+'\n\n'+p).replace(/[\n\r\s　]/g,'').length>maxChars){parts.push(current);current=p;}else{current=current?current+'\n\n'+p:p;}});
+    const paragraphs=text.split(/\n\n+/).filter(p=>p.trim());
+    let current='';let pending='';
+    paragraphs.forEach(p=>{
+      const next=current?current+'\n\n'+p:p;
+      if(current&&next.replace(/[\n\r\s　]/g,'').length>maxChars){
+        // 台詞で終わりそうなら1段落持ち越してから区切る
+        if(ncEndsWithDialog(current)&&pending===''){
+          pending=p;// 次のループで先頭に付ける
+          parts.push(current);current='';
+        } else {
+          parts.push(current);current=p;
+        }
+        if(pending){current=current?pending+'\n\n'+current:pending;pending='';}
+      } else {
+        current=next;
+      }
+    });
+    if(pending) current=current?current+'\n\n'+pending:pending;
     if(current) parts.push(current);
   } else if(ncSplitMode==='delim'){
     const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.trim()).filter(Boolean);
   } else {
-    const n=parseInt(document.getElementById('nc-spCnt').value)||2;const lines=text.split('\n');const perPart=Math.ceil(lines.length/n);
-    for(let i=0;i<n;i++){const chunk=lines.slice(i*perPart,(i+1)*perPart);if(chunk.some(l=>l.trim()))parts.push(chunk.join('\n'));}
+    const n=parseInt(document.getElementById('nc-spCnt').value)||2;
+    const paragraphs=text.split(/\n\n+/).filter(p=>p.trim());
+    const perPart=Math.ceil(paragraphs.length/n);
+    let current='';let partCount=0;let pIdx=0;
+    while(pIdx<paragraphs.length){
+      const p=paragraphs[pIdx];
+      current=current?current+'\n\n'+p:p;pIdx++;
+      const isLastPart=partCount===n-1;
+      if(!isLastPart&&pIdx>=perPart*(partCount+1)&&pIdx<paragraphs.length){
+        if(ncEndsWithDialog(current)){
+          current=current+'\n\n'+paragraphs[pIdx];pIdx++;
+        }
+        parts.push(current);current='';partCount++;
+      }
+    }
+    if(current) parts.push(current);
   }
   const resEl=document.getElementById('nc-spRes');
   if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
   window._ncSplitParts=parts;
   resEl.innerHTML=parts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
-    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button class="btn btn-secondary btn-sm" onclick="ncCopyPart(${i})"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
+    return `<div class="split-card" id="split-card-${i}"><div class="split-card-header"><h4>パート ${i+1} <span class="split-copied-badge"><span class="mi mi-xs">check_circle</span>コピー済み</span></h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button class="btn btn-secondary btn-sm btn-copy-part" onclick="ncCopyPart(${i})"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
   }).join('');
 }
 function ncCopyPart(i){
   const p=(window._ncSplitParts||[])[i];
   if(p==null){ncToast('コピーに失敗しました');return;}
-  navigator.clipboard.writeText(p).then(()=>ncToast('コピーしました')).catch(()=>ncToast('コピーに失敗しました'));
+  navigator.clipboard.writeText(p).then(()=>{
+    // コピー済みバッジをカードに付ける
+    const card=document.getElementById('split-card-'+i);
+    if(card) card.classList.add('copied');
+    ncToast('パート'+(i+1)+'をコピーしました');
+  }).catch(()=>ncToast('コピーに失敗しました'));
 }
 function ncClearSplit(){window._ncSplitParts=[];document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
 
