@@ -2717,13 +2717,19 @@ function ncRunSplit(){
     }
     if(p.trim()) adjustedParts.push(p);
   }
+  window._ncSplitParts = adjustedParts;
   resEl.innerHTML=adjustedParts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
     const pid='split-copy-'+i;
-    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyText(${JSON.stringify(p)},document.getElementById('${pid}'))"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
+    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyPart(${i},'${pid}')"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
   }).join('');
 }
-function ncClearSplit(){document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
+function ncCopyPart(i, pid){
+  const p=(window._ncSplitParts||[])[i];
+  if(p==null){ncToast('コピーに失敗しました');return;}
+  ncCopyText(p, document.getElementById(pid));
+}
+function ncClearSplit(){window._ncSplitParts=[];document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
 
 // スマホ対応コピー
 function ncCopyText(text, btnEl){
