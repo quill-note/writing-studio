@@ -194,6 +194,22 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .stat-mini-num { font-size: 13px; font-weight: 700; color: var(--primary); }
 .stat-mini-label { font-size: 10px; color: var(--text3); }
 
+/* ========== ソートボトムシート ========== */
+.sort-sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 2000; }
+.sort-sheet-overlay.active { display: block; }
+.sort-sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 20px 20px 0 0; padding: 16px 0 32px; z-index: 2001; transform: translateY(100%); transition: transform 0.25s ease; }
+.sort-sheet.active { transform: translateY(0); }
+.sort-sheet-title { font-size: 14px; font-weight: 700; color: var(--text); padding: 0 20px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.sort-sheet-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; font-size: 15px; color: var(--text); cursor: pointer; transition: background 0.1s; }
+.sort-sheet-item:hover { background: var(--primary-pale); }
+.sort-sheet-item.active { color: var(--primary); font-weight: 700; background: var(--primary-pale); }
+.sort-sheet-item .sort-dir { font-size: 12px; color: var(--primary); font-weight: 600; }
+
+/* ========== ソート ========== */
+.sort-bar { display: flex; gap: 6px; padding: 0 16px 8px; flex-wrap: wrap; }
+.sort-btn { font-size: 11px; padding: 3px 10px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-family: inherit; font-weight: 600; display: flex; align-items: center; gap: 3px; transition: all 0.15s; }
+.sort-btn.active { border-color: var(--primary); background: var(--primary-pale); color: var(--primary-dark); }
+
 /* ========== プロット ========== */
 .work-detail-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 0; }
 .work-detail-tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2.5px solid transparent; margin-bottom: -2px; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
@@ -535,6 +551,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
       <h1>作品</h1>
       <div class="header-actions">
         <span class="last-updated-badge"><span class="mi" style="font-size:12px">schedule</span><span class="last-updated-val">---</span></span>
+        <button class="btn-icon" onclick="openSortSheet('works')" title="並び替え"><span class="mi">sort</span></button>
         <button class="btn-icon" onclick="openBackupPage()" title="バックアップ"><span class="mi">backup</span></button>
       </div>
     </div>
@@ -587,7 +604,9 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     <div class="header-top">
       <h1>人物</h1>
       <div class="header-actions">
+        <button class="btn-icon" onclick="openSortSheet('chars')" title="並び替え"><span class="mi">sort</span></button>
         <span class="last-updated-badge"><span class="mi" style="font-size:12px">schedule</span><span class="last-updated-val">---</span></span>
+        <button class="btn-icon" onclick="openSortSheet('works')" title="並び替え"><span class="mi">sort</span></button>
         <button class="btn-icon" onclick="openBackupPage()" title="バックアップ"><span class="mi">backup</span></button>
       </div>
     </div>
@@ -611,7 +630,9 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     <div class="header-top">
       <h1>コンテスト</h1>
       <div class="header-actions">
+        <button class="btn-icon" onclick="openSortSheet('contests')" title="並び替え"><span class="mi">sort</span></button>
         <span class="last-updated-badge"><span class="mi" style="font-size:12px">schedule</span><span class="last-updated-val">---</span></span>
+        <button class="btn-icon" onclick="openSortSheet('works')" title="並び替え"><span class="mi">sort</span></button>
         <button class="btn-icon" onclick="openBackupPage()" title="バックアップ"><span class="mi">backup</span></button>
       </div>
     </div>
@@ -902,6 +923,16 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
 
 
   </div>
+</div>
+
+<!-- ソートボトムシート -->
+<div class="sort-sheet-overlay" id="sort-sheet-overlay" onclick="closeSortSheet()"></div>
+<div class="sort-sheet" id="sort-sheet">
+  <div class="sort-sheet-title">
+    <span>並び順</span>
+    <span class="mi" style="cursor:pointer;color:var(--text3)" onclick="closeSortSheet()">close</span>
+  </div>
+  <div id="sort-sheet-items"></div>
 </div>
 
 <!-- プロット追加フローティングボタン -->
@@ -1391,6 +1422,9 @@ let worksData=loadData('works_data');
 // ページ管理
 // ============================================================
 let currentPage='page-works';
+let worksSort={key:'updated',dir:'desc'};
+let charsSort={key:'updated',dir:'desc'};
+let contestsSort={key:'updated',dir:'desc'};
 let detailPrevPage='page-works';
 
 function showPage(pageId,pushHistory=true) {
@@ -1462,7 +1496,7 @@ function renderBackupPage() { renderGistSettingsUI(); }
 function updateBackupStats() {
   const el=document.getElementById('backup-stats');
   if(!el) return;
-  el.innerHTML=`作品: ${worksData.length}件 ／ 人物: ${characters.length}件 ／ コンテスト: ${contests.length}件 ／ 辞書: ${dictItems.length}件`;
+  el.innerHTML=`作品: ${worksData.length}件 ／ 人物: ${characters.length}件 ／ コンテスト: ${contests.length}件`;
 }
 
 // ============================================================
@@ -1482,14 +1516,7 @@ function renderWorks() {
     const haystack=[w.name,...(w.genres||[]),w.publish,w.status,w.length,...(w.platforms||[]),w.synopsis,w.worldview,w.memo].filter(Boolean).join(' ').toLowerCase();
     return searchTerms.every(t=>haystack.includes(t));
   });
-  list=[...list].sort((a,b)=>{
-    const da=a.deadline?new Date(a.deadline):null;
-    const db=b.deadline?new Date(b.deadline):null;
-    if(da&&db)return da-db;
-    if(da)return -1;
-    if(db)return 1;
-    return new Date(b.updatedAt||0)-new Date(a.updatedAt||0);
-  });
+  list=applySort(list, worksSort, 'name');
   const statEl=document.getElementById('works-stat');
   if(worksData.length>0){
     statEl.style.display='flex';
@@ -1646,6 +1673,7 @@ function renderCharacters(){
     statEl.innerHTML=`<span class="stat-mini-label">総数：</span><span class="stat-mini-num">${cLen}</span><span class="stat-mini-label">　作品数：</span><span class="stat-mini-num">${cW}</span>`;
     const cm=document.getElementById('char-mini-num');if(cm)cm.textContent=cLen+'人';
   } else {statEl.style.display='none';}
+  list=applySort(list, charsSort, 'name');
   const el=document.getElementById('char-list');
   if(list.length===0){el.innerHTML=`<div class="empty-state"><div class="icon mi" style="font-size:48px">person_outline</div><p>キャラクターが見つかりません</p></div>`;return;}
   el.innerHTML=list.map(c=>{
@@ -1820,14 +1848,7 @@ function renderContests(){
     const matchTag=!contestActiveTag.length||contestActiveTag.every(t=>(c.tags||[]).includes(t));
     return matchSearch&&matchTag;
   });
-  list=[...list].sort((a,b)=>{
-    const da=a.deadline?new Date(a.deadline):null;
-    const db=b.deadline?new Date(b.deadline):null;
-    if(da&&db)return da-db;
-    if(da)return -1;
-    if(db)return 1;
-    return new Date(b.updatedAt||0)-new Date(a.updatedAt||0);
-  });
+  list=applySort(list, contestsSort, 'name');
   const allTags=[...new Set(contests.flatMap(c=>c.tags||[]))];
   const filterEl=document.getElementById('contest-tag-filter');
   let fHtml=`<span class="tag-chip ${!contestActiveTag.length?'active':''}" onclick="contestActiveTag=[];renderContests()">すべて</span>`;
@@ -2702,34 +2723,36 @@ function ncRunSplit(){
   }
   const resEl=document.getElementById('nc-spRes');
   if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
-  // セリフ終わり回避：「」で終わるパートは次段落を取り込む
+  // セリフ終わり回避：「」で終わるパートは次パートの最初の行を取り込む
   const adjustedParts = [];
   for(let i=0;i<parts.length;i++){
     let p = parts[i];
-    // パートの末尾が「」で終わる場合、次パートの最初の段落を取り込む
     const trimmed = p.trimEnd();
     if(i < parts.length-1 && /[」』）]$/.test(trimmed)){
-      const nextLines = parts[i+1].split(/\n\n+/);
-      const firstPara = nextLines.shift();
-      p = p + '\n\n' + firstPara;
-      parts[i+1] = nextLines.join('\n\n');
+      // 次パートの最初の行（空行以外）を取り込む
+      const nextLines = parts[i+1].split('\n');
+      const taken = [];
+      while(nextLines.length && (taken.length===0 || !taken[taken.length-1].trim())){
+        taken.push(nextLines.shift());
+      }
+      // 取り込んだ行がセリフでない行まで続ける
+      while(nextLines.length && /[」』）]$/.test(nextLines[0].trim())){
+        taken.push(nextLines.shift());
+      }
+      if(nextLines.length) taken.push(nextLines.shift()); // セリフ後の1行も取り込む
+      p = p + '\n' + taken.join('\n');
+      parts[i+1] = nextLines.join('\n');
       if(!parts[i+1].trim()) parts.splice(i+1,1);
     }
     if(p.trim()) adjustedParts.push(p);
   }
-  window._ncSplitParts = adjustedParts;
   resEl.innerHTML=adjustedParts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
     const pid='split-copy-'+i;
-    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyPart(${i},'${pid}')"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
+    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyText(${JSON.stringify(p)},document.getElementById('${pid}'))"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
   }).join('');
 }
-function ncCopyPart(i, pid){
-  const p=(window._ncSplitParts||[])[i];
-  if(p==null){ncToast('コピーに失敗しました');return;}
-  ncCopyText(p, document.getElementById(pid));
-}
-function ncClearSplit(){window._ncSplitParts=[];document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
+function ncClearSplit(){document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
 
 // スマホ対応コピー
 function ncCopyText(text, btnEl){
@@ -3459,7 +3482,7 @@ function analyzeText(text, charNames=[]){
   const adverbThreshold = Math.max(1, Math.floor(noNewline / 1000));
   const topAdverbs = Object.entries(adverbCount)
     .filter(([w,c])=>c>adverbThreshold)
-    .sort((a,b)=>b[1]-a[1]).slice(0,5);
+    .sort((a,b)=>b[1]-a[1]).slice(0,8);
 
   return {total,noNewline,lines,dialogRate,shijiRate,kanjiRate,avgSentLen,readScore,topWords,topAdverbs,type,typeNote};
 }
@@ -3512,6 +3535,65 @@ function renderAnalyzeResult(r){
       <div class="analyze-word-list">${r.topAdverbs.map(([w,c])=>`<span class="analyze-word-chip">${esc(w)} <b>${c}</b></span>`).join('')}</div>
     </div>`:''}
   `;
+}
+
+// ============================================================
+// ソートボトムシート
+// ============================================================
+let _sortSheetType = null;
+const sortLabels = {
+  works:  [{key:'name',label:'名前'},{key:'updated',label:'更新日'},{key:'created',label:'登録順'}],
+  chars:  [{key:'name',label:'名前'},{key:'updated',label:'更新日'},{key:'created',label:'登録順'}],
+  contests:[{key:'name',label:'名前'},{key:'updated',label:'締切日'},{key:'created',label:'登録順'}],
+};
+
+function openSortSheet(type){
+  _sortSheetType = type;
+  const s = {works:worksSort, chars:charsSort, contests:contestsSort}[type];
+  const items = sortLabels[type];
+  document.getElementById('sort-sheet-items').innerHTML = items.map(({key,label})=>{
+    const active = s.key===key;
+    const dir = active ? (s.dir==='asc'?'古い順':'新しい順') : '';
+    return `<div class="sort-sheet-item${active?' active':''}" onclick="applySheetSort('${key}')">
+      <span>${label}</span>
+      ${active?`<span class="sort-dir">${dir}</span>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('sort-sheet-overlay').classList.add('active');
+  document.getElementById('sort-sheet').classList.add('active');
+}
+
+function closeSortSheet(){
+  document.getElementById('sort-sheet-overlay').classList.remove('active');
+  document.getElementById('sort-sheet').classList.remove('active');
+  _sortSheetType = null;
+}
+
+function applySheetSort(key){
+  const type = _sortSheetType;
+  const map = {works:worksSort, chars:charsSort, contests:contestsSort};
+  const s = map[type];
+  if(s.key===key){ s.dir = s.dir==='asc'?'desc':'asc'; }
+  else { s.key=key; s.dir='desc'; }
+  closeSortSheet();
+  if(type==='works') renderWorks();
+  else if(type==='chars') renderCharacters();
+  else renderContests();
+}
+
+function setSort(type, key, btn){
+  applySheetSort(key);
+}
+
+function applySort(list, sort, nameKey='name'){
+  const {key, dir} = sort;
+  return [...list].sort((a,b)=>{
+    let av, bv;
+    if(key==='name'){ av=a[nameKey]||''; bv=b[nameKey]||''; return dir==='asc'?av.localeCompare(bv,'ja'):bv.localeCompare(av,'ja'); }
+    if(key==='updated'){ av=new Date(a.updatedAt||a.deadline||0); bv=new Date(b.updatedAt||b.deadline||0); }
+    if(key==='created'){ av=a.id||0; bv=b.id||0; }
+    return dir==='asc'?av-bv:bv-av;
+  });
 }
 
 // ============================================================
