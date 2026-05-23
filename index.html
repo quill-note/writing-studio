@@ -2749,32 +2749,42 @@ function ncRunSplit(){
   resEl.innerHTML=adjustedParts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
     const pid='split-copy-'+i;
-    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyText(${JSON.stringify(p)},document.getElementById('${pid}'))"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
+    _copyBuffer[pid]=p;
+    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span>${ct.toLocaleString()}文字</span></div><pre>${eH(preview)}</pre><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyText('${pid}',this)"><span class="mi mi-xs">content_copy</span>コピー</button></div></div>`;
   }).join('');
 }
 function ncClearSplit(){document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
 
 // スマホ対応コピー
-function ncCopyText(text, btnEl){
+// コピー用データを一時保持
+let _copyBuffer = {};
+function ncCopyText(key, btnEl){
+  const text = _copyBuffer[key]||'';
+  const onSuccess = ()=>{
+    ncToast('コピーしました');
+    if(btnEl){
+      btnEl.style.background='var(--border)';
+      btnEl.style.color='var(--text3)';
+      btnEl.innerHTML='<span class="mi mi-xs">check</span>コピー済み';
+      btnEl.disabled=true;
+    }
+  };
   const doFallback = ()=>{
     const ta = document.createElement('textarea');
     ta.value = text;
-    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    ta.style.cssText = 'position:fixed;top:-9999px;left:0;opacity:0';
     document.body.appendChild(ta);
     ta.focus();ta.select();
-    try{ document.execCommand('copy'); }catch(e){}
+    try{ document.execCommand('copy');onSuccess(); }catch(e){ncToast('コピーできませんでした');}
     document.body.removeChild(ta);
   };
   if(navigator.clipboard && window.isSecureContext){
-    navigator.clipboard.writeText(text).catch(doFallback);
+    navigator.clipboard.writeText(text).then(onSuccess).catch(doFallback);
   } else {
     doFallback();
   }
-  ncToast('コピーしました');
-  if(btnEl){
-    btnEl.style.background='var(--border)';
-    btnEl.style.color='var(--text3)';
-    btnEl.innerHTML='<span class="mi mi-xs">check</span>コピー済み';
+  // dummy for closing
+  if(false){
     btnEl.disabled=true;
   }
 }
