@@ -3701,5 +3701,10 @@ initFromClaudeStorage();
 tryRestoreFromIDB();
 restoreGistCredentials().then(()=>tryRestoreFromGist());
 </script>
+  <script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/writing-studio/sw.js');
+}
+</script>
 </body>
 </html>
