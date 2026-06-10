@@ -2719,7 +2719,7 @@ function ncRunSplit(){
     paragraphs.forEach(p=>{if(!p.trim()) return;if(current&&(current+'\n\n'+p).replace(/[\n\r\s　]/g,'').length>maxChars){parts.push(current);current=p;}else{current=current?current+'\n\n'+p:p;}});
     if(current) parts.push(current);
   } else if(ncSplitMode==='delim'){
-    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\n\r]+$/,'')).filter(p=>p.trim());
+    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\s\u3000]+$/,'')).filter(p=>p.trim());
   } else {
     const n=parseInt(document.getElementById('nc-spCnt').value)||2;const lines=text.split('\n');const perPart=Math.ceil(lines.length/n);
     for(let i=0;i<n;i++){const chunk=lines.slice(i*perPart,(i+1)*perPart);if(chunk.some(l=>l.trim()))parts.push(chunk.join('\n'));}
