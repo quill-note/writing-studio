@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#e87b6b">
-  <link rel="apple-touch-icon" href="./icon.png">
-  <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="創作ツール">
@@ -196,6 +193,14 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 }
 .stat-mini-num { font-size: 13px; font-weight: 700; color: var(--primary); }
 .stat-mini-label { font-size: 10px; color: var(--text3); }
+
+/* ========== 絞り込み件数 ========== */
+.filter-count {
+  font-size: 11px; color: var(--text3); padding: 4px 16px 0;
+  display: none;
+}
+.filter-count.show { display: block; }
+.filter-count strong { color: var(--primary); font-weight: 700; }
 
 /* ========== ソートボトムシート ========== */
 .sort-sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 2000; }
@@ -569,6 +574,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     </div>
   </div>
   <div id="works-stat" class="stat-bar" style="display:none"></div>
+  <div id="works-filter-count" class="filter-count"></div>
     <div class="card-list" id="works-list"></div>
 </div>
 
@@ -624,6 +630,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
     </div>
   </div>
   <div id="char-stat" class="stat-bar" style="display:none"></div>
+  <div id="char-filter-count" class="filter-count"></div>
     <div class="card-list" id="char-list"></div>
 </div>
 
@@ -651,6 +658,7 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
   </div>
   <div class="tag-filter-wrap" id="contest-tag-filter"></div>
   <div id="contest-stat" class="stat-bar" style="display:none"></div>
+  <div id="contest-filter-count" class="filter-count"></div>
     <div class="card-list" id="contest-list"></div>
 </div>
 
@@ -1527,6 +1535,8 @@ function renderWorks() {
     statEl.innerHTML=`<span class="stat-mini-label">作品数：</span><span class="stat-mini-num">${wLen}</span><span class="stat-mini-label">　執筆中：</span><span class="stat-mini-num">${wW}</span><span class="stat-mini-label">　完結：</span><span class="stat-mini-num">${wC}</span>`;
     const wm=document.getElementById('works-mini-num');if(wm)wm.textContent=wLen+'作品';
   } else { statEl.style.display='none'; }
+  const wfc=document.getElementById('works-filter-count');
+  if(wfc){const isF=search.length>0;wfc.classList.toggle('show',isF);if(isF)wfc.innerHTML=`<strong>${list.length}</strong> 件表示中 / 全${worksData.length}件`;}
   const el=document.getElementById('works-list');
   if(list.length===0){el.innerHTML=`<div class="empty-state"><div class="icon mi" style="font-size:48px">auto_stories</div><p>${search?'作品が見つかりません':'作品を追加してみましょう'}</p></div>`;return;}
   el.innerHTML=list.map(w=>`<div class="card" onclick="showWorkDetail(${w.id})">
@@ -1676,6 +1686,8 @@ function renderCharacters(){
     statEl.innerHTML=`<span class="stat-mini-label">総数：</span><span class="stat-mini-num">${cLen}</span><span class="stat-mini-label">　作品数：</span><span class="stat-mini-num">${cW}</span>`;
     const cm=document.getElementById('char-mini-num');if(cm)cm.textContent=cLen+'人';
   } else {statEl.style.display='none';}
+  const cfc=document.getElementById('char-filter-count');
+  if(cfc){const isF=searchRaw.length>0;cfc.classList.toggle('show',isF);if(isF)cfc.innerHTML=`<strong>${list.length}</strong> 件表示中 / 全${characters.length}件`;}
   list=applySort(list, charsSort, 'name');
   const el=document.getElementById('char-list');
   if(list.length===0){el.innerHTML=`<div class="empty-state"><div class="icon mi" style="font-size:48px">person_outline</div><p>キャラクターが見つかりません</p></div>`;return;}
@@ -1864,6 +1876,8 @@ function renderContests(){
     const won=contests.filter(c=>c.status==='受賞').length;
     const finalist=contests.filter(c=>['最終','二次','一次','受賞'].includes(c.status)).length;
     statEl.innerHTML=`<span class="stat-mini-label">合計：</span><span class="stat-mini-num">${contests.length}</span><span class="stat-mini-label">　通過：</span><span class="stat-mini-num">${finalist}</span><span class="stat-mini-label">　受賞：</span><span class="stat-mini-num">${won}</span>`;
+    const ctfc=document.getElementById('contest-filter-count');
+    if(ctfc){const isCF=search||contestActiveTag.length>0;ctfc.classList.toggle('show',isCF);if(isCF)ctfc.innerHTML=`<strong>${list.length}</strong> 件表示中 / 全${contests.length}件`;}
     const ctm=document.getElementById('contest-mini-num');if(ctm)ctm.textContent=contests.length+'件';
   } else {statEl.style.display='none';}
   const el=document.getElementById('contest-list');
@@ -2719,7 +2733,7 @@ function ncRunSplit(){
     paragraphs.forEach(p=>{if(!p.trim()) return;if(current&&(current+'\n\n'+p).replace(/[\n\r\s　]/g,'').length>maxChars){parts.push(current);current=p;}else{current=current?current+'\n\n'+p:p;}});
     if(current) parts.push(current);
   } else if(ncSplitMode==='delim'){
-    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\s\u3000]+$/,'')).filter(p=>p.trim());
+    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.trim()).filter(Boolean);
   } else {
     const n=parseInt(document.getElementById('nc-spCnt').value)||2;const lines=text.split('\n');const perPart=Math.ceil(lines.length/n);
     for(let i=0;i<n;i++){const chunk=lines.slice(i*perPart,(i+1)*perPart);if(chunk.some(l=>l.trim()))parts.push(chunk.join('\n'));}
@@ -3701,11 +3715,6 @@ window.addEventListener('resize',updateStatBarTop);
 initFromClaudeStorage();
 tryRestoreFromIDB();
 restoreGistCredentials().then(()=>tryRestoreFromGist());
-</script>
-  <script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/writing-studio/sw.js');
-}
 </script>
 </body>
 </html>
