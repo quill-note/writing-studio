@@ -2738,8 +2738,8 @@ function ncRunSplit(){
     });
     if(current) parts.push(current);
     // 元テキストが末尾に空行を持つ場合は最後のパートに反映
-    const trailingNewlines=text.match(/\n+$/);
-    if(trailingNewlines&&parts.length>0) parts[parts.length-1]+=trailingNewlines[0];
+
+
   } else if(ncSplitMode==='delim'){
     const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\n\r]+$/,'')).filter(p=>p.trim());
   } else {
