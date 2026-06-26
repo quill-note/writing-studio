@@ -2749,29 +2749,46 @@ function ncRunSplit(){
   }
   const resEl=document.getElementById('nc-spRes');
   if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
-  // セリフ終わり回避：「」で終わるパートは次パートの最初の行を取り込む
-  const adjustedParts = [];
-  for(let i=0;i<parts.length;i++){
-    let p = parts[i];
-    const trimmed = p.trimEnd();
-    if(i < parts.length-1 && /[」』）]$/.test(trimmed)){
-      // 次パートの最初の行（空行以外）を取り込む
-      const nextLines = parts[i+1].split('\n');
-      const taken = [];
-      while(nextLines.length && (taken.length===0 || !taken[taken.length-1].trim())){
-        taken.push(nextLines.shift());
-      }
-      // 取り込んだ行がセリフでない行まで続ける
-      while(nextLines.length && /[」』）]$/.test(nextLines[0].trim())){
-        taken.push(nextLines.shift());
-      }
-      if(nextLines.length) taken.push(nextLines.shift()); // セリフ後の1行も取り込む
-      p = p + '\n' + taken.join('\n');
-      parts[i+1] = nextLines.join('\n');
-      if(!parts[i+1].trim()) parts.splice(i+1,1);
+  // セリフ終わり回避：パート末尾がセリフ（「」『』）で終わる場合、
+  // 次パートの先頭から地の文が出てくるところまで取り込んでから区切る
+  const endsWithSerifu = (str) => {
+    const lines = str.replace(/\s+$/,'').split('\n');
+    for(let k=lines.length-1;k>=0;k--){
+      const t = lines[k].trim();
+      if(!t) continue;            // 空行は飛ばして最後の本文行を見る
+      return /[」』]$/.test(t);    // その行がセリフで終わっているか
     }
-    if(p.trim()) adjustedParts.push(p);
+    return false;
+  };
+  for(let i=0;i<parts.length-1;i++){
+    // 末尾がセリフである限り、後続パートから地の文が出てくるまで取り込む
+    while(endsWithSerifu(parts[i])){
+      // 中身のある次のパートを探す（空パートはまたいでよい）
+      let j=i+1;
+      while(j<parts.length && (!parts[j] || !parts[j].trim())) j++;
+      if(j>=parts.length) break; // これ以上取り込める本文がない
+      const next = parts[j];
+      const sepIdx = next.search(/\n\n+/);
+      let unit, rest, sep;
+      if(sepIdx !== -1){
+        // 段落単位で取り込む（空行区切りを保持）
+        unit = next.slice(0, sepIdx);
+        rest = next.slice(sepIdx).replace(/^\n+/,'');
+        sep = '\n\n';
+      } else {
+        // 段落区切りがなければ1行単位で取り込む
+        const nl = next.indexOf('\n');
+        if(nl === -1){ unit = next; rest = ''; }
+        else { unit = next.slice(0, nl); rest = next.slice(nl+1); }
+        sep = '\n';
+      }
+      unit = unit.replace(/^\n+/,''); // 先頭の余分な改行のみ除去（字下げは保持）
+      if(!unit.trim()){ parts[j] = rest; continue; } // 空行・空単位は区切りとして消費
+      parts[i] = parts[i].replace(/\s+$/,'') + sep + unit;
+      parts[j] = rest;
+    }
   }
+  const adjustedParts = parts.filter(p => p && p.trim());
   resEl.innerHTML=adjustedParts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
     const pid='split-copy-'+i;
