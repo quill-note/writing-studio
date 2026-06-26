@@ -2727,68 +2727,72 @@ function ncSetSM(mode,btn){
 }
 function ncRunSplit(){
   const text=document.getElementById('nc-srcEditor').value;if(!text.trim()){showToast('エディタにテキストを貼り付けてください');return;}
-  let parts=[];
-  if(ncSplitMode==='chars'){
-    const maxChars=parseInt(document.getElementById('nc-spChr').value)||1500;
-    const paragraphs=text.split(/\n\n+/);let current='';
-    paragraphs.forEach(p=>{
-      if(!p.trim()) return;
-      if(current&&(current+'\n\n'+p).replace(/[\n\r\s　]/g,'').length>maxChars){
-        parts.push(current);current=p;
-      }else{current=current?current+'\n\n'+p:p;}
-    });
-    if(current) parts.push(current);
-    // 元テキストが末尾に空行を持つ場合は最後のパートに反映
-
-
-  } else if(ncSplitMode==='delim'){
-    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\n\r]+$/,'')).filter(p=>p.trim());
-  } else {
-    const n=parseInt(document.getElementById('nc-spCnt').value)||2;const lines=text.split('\n');const perPart=Math.ceil(lines.length/n);
-    for(let i=0;i<n;i++){const chunk=lines.slice(i*perPart,(i+1)*perPart);if(chunk.some(l=>l.trim()))parts.push(chunk.join('\n'));}
-  }
   const resEl=document.getElementById('nc-spRes');
-  if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
-  // セリフ終わり回避：パート末尾がセリフ（「」『』）で終わる場合、
-  // 次パートの先頭から地の文が出てくるところまで取り込んでから区切る
-  const endsWithSerifu = (str) => {
-    const lines = str.replace(/\s+$/,'').split('\n');
-    for(let k=lines.length-1;k>=0;k--){
-      const t = lines[k].trim();
-      if(!t) continue;            // 空行は飛ばして最後の本文行を見る
-      return /[」』]$/.test(t);    // その行がセリフで終わっているか
-    }
-    return false;
-  };
-  for(let i=0;i<parts.length-1;i++){
-    // 末尾がセリフである限り、後続パートから地の文が出てくるまで取り込む
-    while(endsWithSerifu(parts[i])){
-      // 中身のある次のパートを探す（空パートはまたいでよい）
-      let j=i+1;
-      while(j<parts.length && (!parts[j] || !parts[j].trim())) j++;
-      if(j>=parts.length) break; // これ以上取り込める本文がない
-      const next = parts[j];
-      const sepIdx = next.search(/\n\n+/);
-      let unit, rest, sep;
-      if(sepIdx !== -1){
-        // 段落単位で取り込む（空行区切りを保持）
-        unit = next.slice(0, sepIdx);
-        rest = next.slice(sepIdx).replace(/^\n+/,'');
-        sep = '\n\n';
-      } else {
-        // 段落区切りがなければ1行単位で取り込む
-        const nl = next.indexOf('\n');
-        if(nl === -1){ unit = next; rest = ''; }
-        else { unit = next.slice(0, nl); rest = next.slice(nl+1); }
-        sep = '\n';
+  let parts=[];
+
+  if(ncSplitMode==='delim'){
+    // 区切り文字モード：ユーザーの意図した区切りなので原文そのまま、セリフ調整は行わない
+    const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}
+    parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\n\r]+$/,'')).filter(p=>p.trim());
+  } else {
+    // 文字数モード／パート数モード：本文はいじらず「切る位置（文字index・行頭）」だけを決め、
+    // セリフ終わりになる位置は地の文が来るまで後ろへずらす。最後に原文をそのままスライスする。
+
+    // 全行の開始位置（文字index）
+    const lineStarts=[0];
+    for(let k=0;k<text.length;k++){ if(text[k]==='\n') lineStarts.push(k+1); }
+
+    let cuts=[]; // 切る位置（行頭）。0と末尾は含めない。
+    if(ncSplitMode==='chars'){
+      const maxChars=parseInt(document.getElementById('nc-spChr').value)||1500;
+      // 段落（空行区切り）の開始位置を集める
+      const paraStarts=[0]; const reSep=/\n\n+/g; let m;
+      while((m=reSep.exec(text))!==null){ paraStarts.push(reSep.lastIndex); }
+      let acc=0;
+      for(let p=0;p<paraStarts.length;p++){
+        const start=paraStarts[p];
+        const end=(p+1<paraStarts.length)? paraStarts[p+1] : text.length;
+        const plen=text.slice(start,end).replace(/[\n\r\s　]/g,'').length;
+        if(plen===0) continue;
+        if(acc>0 && acc+plen>maxChars){ cuts.push(start); acc=0; }
+        acc+=plen;
       }
-      unit = unit.replace(/^\n+/,''); // 先頭の余分な改行のみ除去（字下げは保持）
-      if(!unit.trim()){ parts[j] = rest; continue; } // 空行・空単位は区切りとして消費
-      parts[i] = parts[i].replace(/\s+$/,'') + sep + unit;
-      parts[j] = rest;
+    } else {
+      // パート数モード：行数で均等割り（区切りは行頭にそろう）
+      const n=parseInt(document.getElementById('nc-spCnt').value)||2;
+      const per=Math.ceil(lineStarts.length/n);
+      for(let i=1;i<n;i++){ const li=i*per; if(li<lineStarts.length) cuts.push(lineStarts[li]); }
     }
+
+    // セリフ終わり回避：区切り直前の最後の本文行がセリフで終わる間、区切りを次の行頭へ送る
+    const nextLineStart=(pos)=>{ for(const ls of lineStarts){ if(ls>pos) return ls; } return text.length; };
+    const prevEndsWithSerifu=(cut)=>{
+      const before=text.slice(0,cut).replace(/\n+$/,'');
+      const idx=before.lastIndexOf('\n');
+      const lastLine=(idx===-1? before : before.slice(idx+1)).trim();
+      return lastLine && /[」』]$/.test(lastLine);
+    };
+    cuts=cuts.map(c=>{
+      let cut=c, guard=0;
+      while(prevEndsWithSerifu(cut) && guard++<200000){
+        const nl=nextLineStart(cut);
+        if(nl<=cut || nl>=text.length){ cut=text.length; break; }
+        cut=nl;
+      }
+      return cut;
+    });
+    // 0／末尾を除外し、昇順ユニークにそろえる（ずらしで重なった区切りはまとめる）
+    cuts=[...new Set(cuts.filter(c=>c>0 && c<text.length))].sort((a,b)=>a-b);
+
+    // 原文をそのままスライス（前後の空行のみ整える）
+    let prev=0;
+    const pushSeg=(s)=>{ const seg=s.replace(/^\n+/,'').replace(/\n+$/,''); if(seg.trim()) parts.push(seg); };
+    for(const c of cuts){ pushSeg(text.slice(prev,c)); prev=c; }
+    pushSeg(text.slice(prev));
   }
-  const adjustedParts = parts.filter(p => p && p.trim());
+
+  if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
+  const adjustedParts = parts;
   resEl.innerHTML=adjustedParts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;const preview=p.length>200?p.slice(0,200)+'…':p;
     const pid='split-copy-'+i;
