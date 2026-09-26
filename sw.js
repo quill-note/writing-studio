@@ -9,7 +9,9 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(names => Promise.all(
-      names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))
+      // 同じ quill-note.github.io のほかのアプリ（あみものノートなど）のキャッシュは消さない。
+      // 自分の古いキャッシュ（sosaku-…）だけを片付ける
+      names.filter(n => n.startsWith('sosaku-') && n !== CACHE_NAME).map(n => caches.delete(n))
     ))
   );
   self.clients.claim();
