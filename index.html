@@ -2725,6 +2725,8 @@ function ncSetSM(mode,btn){
   document.getElementById('nc-spCntF').style.display=mode==='count'?'':'none';
   document.getElementById('nc-spDlmF').style.display=mode==='delim'?'':'none';
 }
+// 分割パートの前後を整える：先頭の空白だけの行を除去（1行目の字下げは残す）／末尾の改行・半角全角スペースを除去
+function ncTidySeg(s){ return s.replace(/^(?:[ \t　]*\r?\n)+/,'').replace(/\s+$/,''); }
 function ncRunSplit(){
   const text=document.getElementById('nc-srcEditor').value;if(!text.trim()){showToast('エディタにテキストを貼り付けてください');return;}
   const resEl=document.getElementById('nc-spRes');
@@ -2733,7 +2735,7 @@ function ncRunSplit(){
   if(ncSplitMode==='delim'){
     // 区切り文字モード：ユーザーの意図した区切りなので原文そのまま、セリフ調整は行わない
     const delim=document.getElementById('nc-spDlm').value;if(!delim){showToast('区切り文字を入力してください');return;}
-    parts=text.split(delim).map(p=>p.replace(/^[\n\r]+/,'').replace(/[\n\r]+$/,'')).filter(p=>p.trim());
+    parts=text.split(delim).map(ncTidySeg).filter(p=>p.trim());
   } else {
     // 文字数モード／パート数モード：本文はいじらず「切る位置（文字index・行頭）」だけを決め、
     // セリフ終わりになる位置は地の文が来るまで後ろへずらす。最後に原文をそのままスライスする。
@@ -2786,7 +2788,7 @@ function ncRunSplit(){
 
     // 原文をそのままスライス（前後の空行のみ整える）
     let prev=0;
-    const pushSeg=(s)=>{ const seg=s.replace(/^\n+/,'').replace(/\n+$/,''); if(seg.trim()) parts.push(seg); };
+    const pushSeg=(s)=>{ const seg=ncTidySeg(s); if(seg.trim()) parts.push(seg); };
     for(const c of cuts){ pushSeg(text.slice(prev,c)); prev=c; }
     pushSeg(text.slice(prev));
   }
