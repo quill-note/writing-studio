@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sosaku-v4';
+const CACHE_NAME = 'sosaku-v5';
 const urlsToCache = ['./', './index.html'];
 
 self.addEventListener('install', e => {
