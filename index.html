@@ -2799,6 +2799,7 @@ function ncRunSplit(){
 
   if(!parts.length){resEl.innerHTML='<p style="color:var(--text3);font-size:13px">分割できませんでした</p>';return;}
   _splitParts=parts;
+  _splitHistory=[];
   ncRenderSplit();
 }
 
@@ -2808,46 +2809,95 @@ function ncTrimPart(s){
 }
 
 // 分割結果（編集・再分割用に保持）
-let _splitParts=[];
+let _splitParts=[], _splitHistory=[];
+function ncSplitSave(){ _splitHistory.push(_splitParts.slice()); if(_splitHistory.length>50) _splitHistory.shift(); }
+function ncSplitUndo(){
+  if(!_splitHistory.length){ncToast('戻せる操作がありません');return;}
+  _splitParts=_splitHistory.pop();
+  ncRenderSplit();
+  ncToast('ひとつ前に戻しました');
+}
 function ncRenderSplit(){
   const resEl=document.getElementById('nc-spRes');
   _copyBuffer={};
-  const hint='<p class="split-hint">本文をタップしてカーソルを置き「ここで分割」で、その行の頭から新しいパートに分けられます。「次と結合」で区切りを取り消せます。</p>';
+  const n=_splitParts.length;
+  const hint=`<p class="split-hint">本文をタップしてカーソルを置いてからボタンを押してください。<br>
+    <b>ここから次へ</b>：カーソルのある行から最後までを、次のパートの頭に移します。<br>
+    <b>ここまで前へ</b>：最初からカーソルのある行までを、前のパートの最後に移します。<br>
+    <b>ここで分割</b>：カーソルのある行から新しいパートにします。<b>次と結合</b>：区切りをなくします。</p>
+    <div class="btn-bar" style="margin-bottom:8px"><button id="split-undo" class="btn btn-secondary btn-sm" onclick="ncSplitUndo()" ${_splitHistory.length?'':'disabled style="opacity:.5"'}><span class="mi mi-xs">undo</span>元に戻す</button></div>`;
   resEl.innerHTML=hint+_splitParts.map((p,i)=>{
     const ct=p.replace(/[\n\r\s　]/g,'').length;
     const pid='split-copy-'+i;
     _copyBuffer[pid]=p;
-    const joinBtn = i<_splitParts.length-1 ? `<button class="btn btn-secondary btn-sm" onclick="ncJoinSplit(${i})"><span class="mi mi-xs">link</span>次と結合</button>` : '';
-    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span id="split-ct-${i}">${ct.toLocaleString()}文字</span></div><textarea class="split-text" id="split-ta-${i}" oninput="ncEditSplit(${i},this.value)">${eH(p)}</textarea><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyText('${pid}',this)"><span class="mi mi-xs">content_copy</span>コピー</button><button class="btn btn-secondary btn-sm" onclick="ncSplitAtCursor(${i})"><span class="mi mi-xs">content_cut</span>ここで分割</button>${joinBtn}</div></div>`;
+    const btn=(fn,icon,label)=>`<button class="btn btn-secondary btn-sm" onclick="${fn}"><span class="mi mi-xs">${icon}</span>${label}</button>`;
+    const prevBtn = i>0 ? btn(`ncMoveToPrev(${i})`,'north','ここまで前へ') : '';
+    const nextBtn = i<n-1 ? btn(`ncMoveToNext(${i})`,'south','ここから次へ') : '';
+    const joinBtn = i<n-1 ? btn(`ncJoinSplit(${i})`,'link','次と結合') : '';
+    return `<div class="split-card"><div class="split-card-header"><h4>パート ${i+1}</h4><span id="split-ct-${i}">${ct.toLocaleString()}文字</span></div><textarea class="split-text" id="split-ta-${i}" onfocus="ncEditStart(${i})" oninput="ncEditSplit(${i},this.value)">${eH(p)}</textarea><div class="btn-bar"><button id="${pid}" class="btn btn-secondary btn-sm" onclick="ncCopyText('${pid}',this)"><span class="mi mi-xs">content_copy</span>コピー</button>${prevBtn}${nextBtn}${btn(`ncSplitAtCursor(${i})`,'content_cut','ここで分割')}${joinBtn}</div></div>`;
   }).join('');
 }
+// 手で書き換え始めたときも「元に戻す」の対象にする（入力のたびではなく、編集を始めたときに1回保存）
+function ncEditStart(i){ _splitEditSaved=false; }
+let _splitEditSaved=false;
 function ncEditSplit(i,val){
+  if(!_splitEditSaved){ ncSplitSave(); _splitEditSaved=true; const u=document.getElementById('split-undo'); if(u){u.disabled=false;u.style.opacity='';} }
   _splitParts[i]=val;
   _copyBuffer['split-copy-'+i]=val;
   const el=document.getElementById('split-ct-'+i);
   if(el) el.textContent=val.replace(/[\n\r\s　]/g,'').length.toLocaleString()+'文字';
 }
+// カーソル位置を行の頭／行の終わりにそろえる
+function ncCursor(i){
+  const ta=document.getElementById('split-ta-'+i); if(!ta) return null;
+  const text=_splitParts[i], pos=ta.selectionStart;
+  if(pos==null) return null;
+  const lineStart=text.lastIndexOf('\n',pos-1)+1;
+  let lineEnd=text.indexOf('\n',pos); if(lineEnd===-1) lineEnd=text.length;
+  return {text,lineStart,lineEnd};
+}
+const ncHasBody=t=>!!t.replace(/[\s　]/g,'');
 function ncSplitAtCursor(i){
-  const ta=document.getElementById('split-ta-'+i);if(!ta) return;
-  const text=_splitParts[i];
-  let pos=ta.selectionStart;
-  if(pos==null){ncToast('分割したい位置をタップしてください');return;}
-  // 行の途中なら、その行の頭で切る（文の途中で切れないように）
-  pos=text.lastIndexOf('\n',pos-1)+1;
-  if(pos<=0) pos=0;
-  const a=ncTrimPart(text.slice(0,pos)), b=ncTrimPart(text.slice(pos));
-  if(!a.replace(/[\s　]/g,'') || !b.replace(/[\s　]/g,'')){ncToast('分割したい行にカーソルを置いてください（先頭行以外）');return;}
+  const c=ncCursor(i); if(!c){ncToast('分割したい位置をタップしてください');return;}
+  const a=ncTrimPart(c.text.slice(0,c.lineStart)), b=ncTrimPart(c.text.slice(c.lineStart));
+  if(!ncHasBody(a)||!ncHasBody(b)){ncToast('分割したい行にカーソルを置いてください（先頭行以外）');return;}
+  ncSplitSave();
   _splitParts.splice(i,1,a,b);
   ncRenderSplit();
   ncToast('パート '+(i+1)+' を分割しました');
 }
+function ncMoveToNext(i){
+  if(i>=_splitParts.length-1) return;
+  const c=ncCursor(i); if(!c){ncToast('移したい最初の行をタップしてください');return;}
+  const a=ncTrimPart(c.text.slice(0,c.lineStart)), b=ncTrimPart(c.text.slice(c.lineStart));
+  if(!ncHasBody(a)){ncToast('パートが空になってしまいます。「次と結合」を使ってください');return;}
+  if(!ncHasBody(b)) return;
+  ncSplitSave();
+  _splitParts[i]=a;
+  _splitParts[i+1]=b+'\n\n'+_splitParts[i+1];
+  ncRenderSplit();
+  ncToast('パート '+(i+2)+' の頭に移しました');
+}
+function ncMoveToPrev(i){
+  if(i<=0) return;
+  const c=ncCursor(i); if(!c){ncToast('移したい最後の行をタップしてください');return;}
+  const a=ncTrimPart(c.text.slice(0,c.lineEnd)), b=ncTrimPart(c.text.slice(c.lineEnd));
+  if(!ncHasBody(b)){ncToast('パートが空になってしまいます。前のパートの「次と結合」を使ってください');return;}
+  if(!ncHasBody(a)) return;
+  ncSplitSave();
+  _splitParts[i-1]=_splitParts[i-1]+'\n\n'+a;
+  _splitParts[i]=b;
+  ncRenderSplit();
+  ncToast('パート '+i+' の最後に移しました');
+}
 function ncJoinSplit(i){
   if(i>=_splitParts.length-1) return;
+  ncSplitSave();
   _splitParts.splice(i,2,_splitParts[i]+'\n\n'+_splitParts[i+1]);
   ncRenderSplit();
   ncToast('パート '+(i+1)+' と '+(i+2)+' を結合しました');
 }
-function ncClearSplit(){_splitParts=[];document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
+function ncClearSplit(){_splitParts=[];_splitHistory=[];document.getElementById('nc-spRes').innerHTML='<p style="font-size:13px;color:var(--text3)">分割結果がここに表示されます。</p>';}
 
 // スマホ対応コピー
 // コピー用データを一時保持
