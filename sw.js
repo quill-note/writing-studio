@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sosaku-v5';
+const CACHE_NAME = 'sosaku-v6';
 const urlsToCache = ['./', './index.html'];
 
 self.addEventListener('install', e => {
@@ -22,7 +22,8 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(
-    fetch(e.request).then(res => {
+    // ブラウザのHTTPキャッシュ（GitHub Pagesは最大10分）を通さず、毎回サーバーに最新か確認する
+    fetch(e.request, { cache: 'no-cache' }).then(res => {
       const clone = res.clone();
       caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
       return res;
