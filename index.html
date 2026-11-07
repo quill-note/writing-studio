@@ -930,8 +930,11 @@ select.input-sel, input.input-text { font-family: 'Hiragino Sans', 'Meiryo', san
 
     <div class="wtab-panel" id="wtab-analyze">
       <div style="margin-bottom:12px">
-        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">分析したいテキストをエディタに貼り付けて「分析する」を押してください</div>
-        <button class="btn btn-primary btn-sm" onclick="runAnalyze()"><span class="mi mi-xs">bar_chart</span>分析する</button>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.7">エディタのテキストの会話率と、場面ごとの文字数の配分を数えます。<br>場面は区切り記号で分けます（見つからないときは5等分）。</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div class="split-field"><label>場面の区切り記号</label><input class="input-text" id="an-dlm" placeholder="例：＊＊＊" style="width:110px;font-family:var(--font-mincho);padding:8px 12px;font-size:13px"></div>
+          <button class="btn btn-primary btn-sm" onclick="runAnalyze()"><span class="mi mi-xs">bar_chart</span>分析する</button>
+        </div>
       </div>
       <div id="analyze-result"></div>
     </div>
@@ -3479,6 +3482,7 @@ function runAnalyze(){
     return names.filter(n=>n.length>=2);
   });
   const result = analyzeText(text, charNames);
+  result.scenes = ncAnalyzeScenes(text);
   renderAnalyzeResult(result);
 }
 
@@ -3587,53 +3591,107 @@ function analyzeText(text, charNames=[]){
   return {total,noNewline,lines,dialogRate,shijiRate,kanjiRate,avgSentLen,readScore,topWords,topAdverbs,type,typeNote};
 }
 
+// 本文の文字数（改行・空白を除く）と、うち「」『』内の文字数
+function ncCountChars(t){
+  const body=t.replace(/[\s　]/g,'');
+  const dlg=(t.match(/「[^」]*」|『[^』]*』/g)||[]).join('').replace(/[\s　]/g,'');
+  return {chars:body.length, dialog:Math.min(dlg.length, body.length)};
+}
+// 場面ごとに分ける：区切り記号があればそれで、なければ段落の切れ目で5等分
+function ncAnalyzeScenes(text){
+  const dlmEl=document.getElementById('an-dlm');
+  let dlm=(dlmEl&&dlmEl.value.trim())||'';
+  if(!dlm){ const sp=document.getElementById('nc-spDlm'); if(sp&&sp.value.trim()){dlm=sp.value.trim(); if(dlmEl) dlmEl.value=dlm;} }
+  let raws=[], byDelim=false;
+  if(dlm && text.includes(dlm)){
+    raws=text.split(dlm); byDelim=true;
+  } else {
+    const paras=text.split(/\n\s*\n/);
+    const total=ncCountChars(text).chars||1, n=5;
+    let cur=[], acc=0, k=1;
+    paras.forEach(p=>{
+      cur.push(p); acc+=ncCountChars(p).chars;
+      if(k<n && acc>=total*k/n){ raws.push(cur.join('\n\n')); cur=[]; k++; }
+    });
+    if(cur.length) raws.push(cur.join('\n\n'));
+  }
+  const scenes=raws.map(t=>{
+    const c=ncCountChars(t);
+    const first=(t.split('\n').map(l=>l.trim()).find(l=>l)||'');
+    return {head:first.length>16?first.slice(0,16)+'…':first, chars:c.chars, dialog:c.dialog};
+  }).filter(sc=>sc.chars>0);
+  // 前半・後半：本文の文字数でちょうど半分の位置で原文を切って数える
+  const body=dlm&&byDelim? text.split(dlm).join('') : text;
+  const totalC=ncCountChars(body).chars; let cnt=0, cut=body.length;
+  for(let k=0;k<body.length;k++){ if(!/[\s　]/.test(body[k])){ cnt++; if(cnt>=totalC/2){ cut=k+1; break; } } }
+  // 会話の途中で切れないよう、切る位置を行末までずらす
+  const nl=body.indexOf('\n',cut); if(nl!==-1) cut=nl;
+  const ha=ncCountChars(body.slice(0,cut)), hb=ncCountChars(body.slice(cut));
+  return {list:scenes, byDelim, dlm, half:{a:{c:ha.chars,d:ha.dialog},b:{c:hb.chars,d:hb.dialog}}};
+}
+
+// 会話率の目安ラベル（20〜35%を標準とする）
+function ncDialogLabel(rate){
+  if(rate<15) return {t:'少なめ',c:'#7b9fd4'};
+  if(rate<20) return {t:'やや少なめ',c:'#9ab3d9'};
+  if(rate<=35) return {t:'ちょうどいい',c:'var(--primary)'};
+  if(rate<=50) return {t:'やや多め',c:'#e8a090'};
+  return {t:'多め',c:'#e87b6b'};
+}
+// 場面の長さラベル（場面の平均文字数と比べる）
+function ncLenLabel(chars,avg){
+  const r=chars/avg;
+  if(r>=1.5) return {t:'長め',c:'#e8a090'};
+  if(r<=0.5) return {t:'短め',c:'#7b9fd4'};
+  return {t:'ちょうどいい',c:'var(--primary)'};
+}
+function ncBadge(l){return `<span style="display:inline-block;font-size:10px;padding:1px 7px;border-radius:8px;border:1px solid ${l.c};color:${l.c};margin-left:4px;font-weight:700;white-space:nowrap">${l.t}</span>`;}
+
 function renderAnalyzeResult(r){
   const el=document.getElementById('analyze-result');
   if(!el)return;
+  const sc=r.scenes||{list:[]};
+  const list=sc.list;
+  const total=list.reduce((a,b)=>a+b.chars,0)||1;
+  const totalDlg=list.reduce((a,b)=>a+b.dialog,0);
+  const dialogRate=totalDlg/total*100;
+  const max=Math.max(...list.map(x=>x.chars),1);
+  const avg=total/(list.length||1);
 
-  const dialogColor = r.dialogRate>=20&&r.dialogRate<=50 ? 'var(--primary)' : r.dialogRate<10 ? '#e87b6b' : 'var(--primary)';
-  const readColor = r.readScore>=70 ? 'var(--primary)' : r.readScore>=50 ? '#e8a090' : '#e87b6b';
-  const readLabel = r.readScore>=80?'読みやすい':r.readScore>=60?'やや読みやすい':r.readScore>=40?'普通':'改善の余地あり';
+  const half=sc.half||{a:{c:0,d:0},b:{c:0,d:0}};
+  const hr=h=>h.c?(h.d/h.c*100).toFixed(1):'0.0';
+  const diff=(+hr(half.b))-(+hr(half.a));
+  const tempoNote = diff<=-8 ? '<div class="analyze-note" style="color:#e87b6b;font-weight:700">後半で会話がぐっと減っています。地の文が重くなってテンポが落ちていないか、確かめてみてください。</div>'
+    : diff>=8 ? '<div class="analyze-note" style="color:var(--text2)">後半で会話が増えています。山場が会話中心なら狙いどおりです。</div>'
+    : '<div class="analyze-note" style="color:var(--text2)">前半と後半で会話の割合に大きな差はありません。</div>';
+
+  const rows=list.map((x,i)=>{
+    const pct=x.chars/total*100;
+    const isMax=x.chars===max && list.length>1;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text2)">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mincho)">${sc.byDelim?'場面':'区間'}${i+1}${isMax?'<span class="analyze-tag" style="margin-left:6px;font-size:10px;padding:1px 6px">最多</span>':''}　<span style="color:var(--text3)">${esc(x.head)}</span></span>
+        <span style="flex-shrink:0;color:var(--text3)">${x.chars.toLocaleString()}字（${pct.toFixed(0)}%）</span>
+      </div>
+      <div class="analyze-bar-wrap" style="height:10px"><div class="analyze-bar" style="width:${x.chars/max*100}%"></div></div>
+      ${list.length>1?'<div class="analyze-note" style="margin-top:0">長さ'+ncBadge(ncLenLabel(x.chars,avg))+'</div>':''}
+    </div>`;
+  }).join('');
 
   el.innerHTML = `
     <div class="analyze-card">
-      <div class="analyze-card-title"><span class="mi mi-sm">format_size</span>文字数</div>
-      <div style="display:flex;gap:16px;align-items:flex-end">
-        <div><div class="analyze-value">${r.noNewline.toLocaleString()}<span class="analyze-value-unit">字</span></div><div class="analyze-note">改行除く</div></div>
-        <div><div style="font-size:18px;font-weight:700;color:var(--text2)">${r.total.toLocaleString()}<span class="analyze-value-unit">字</span></div><div class="analyze-note">改行含む</div></div>
-        <div><div style="font-size:18px;font-weight:700;color:var(--text2)">${(r.noNewline/400).toFixed(1)}<span class="analyze-value-unit">枚</span></div><div class="analyze-note">原稿用紙換算</div></div>
-      </div>
-    </div>
-
-    <div class="analyze-card">
       <div class="analyze-card-title"><span class="mi mi-sm">chat_bubble_outline</span>会話率</div>
-      <div class="analyze-value" style="color:${dialogColor}">${r.dialogRate.toFixed(1)}<span class="analyze-value-unit">%</span></div>
-      <div class="analyze-bar-wrap"><div class="analyze-bar" style="width:${Math.min(r.dialogRate,100)}%;background:${dialogColor}"></div></div>
-      <div class="analyze-note">目安：20〜35%が標準的な小説 / 35〜50%がライトノベル寄り</div>
+      <div class="analyze-value">${dialogRate.toFixed(1)}<span class="analyze-value-unit">%</span>${ncBadge(ncDialogLabel(dialogRate))}</div>
+      <div class="analyze-bar-wrap"><div class="analyze-bar" style="width:${Math.min(dialogRate,100)}%"></div></div>
+      <div class="analyze-note">前半 ${hr(half.a)}%${ncBadge(ncDialogLabel(+hr(half.a)))} → 後半 ${hr(half.b)}%${ncBadge(ncDialogLabel(+hr(half.b)))}（文字数で半分に分けたとき）<br>目安：20〜35%が標準的な小説 / 35〜50%がライトノベル寄り</div>
+      ${tempoNote}
     </div>
 
     <div class="analyze-card">
-      <div class="analyze-card-title"><span class="mi mi-sm">visibility</span>読みやすさ</div>
-      <div class="analyze-value" style="color:${readColor}">${Math.round(r.readScore)}<span class="analyze-value-unit">/ 100</span></div>
-      <div class="analyze-bar-wrap"><div class="analyze-bar" style="width:${r.readScore}%;background:${readColor}"></div></div>
-      <div class="analyze-note">${readLabel}（漢字率${r.kanjiRate.toFixed(1)}% / 平均文長${r.avgSentLen.toFixed(1)}字 / 指示語率${r.shijiRate.toFixed(2)}%）</div>
+      <div class="analyze-card-title"><span class="mi mi-sm">bar_chart</span>${sc.byDelim?'場面ごとの配分（区切り：'+esc(sc.dlm)+'）':'区間ごとの配分（5等分）'}</div>
+      <div class="analyze-note" style="margin:0 0 10px">バーの長さ＝文字数。長さのラベルは場面の平均と比べた目安です（1.5倍以上で長め・半分以下で短め）。一番書きたい場面に一番文字数がかかっているか、後半が急に薄くなっていないかを見る目安にどうぞ。</div>
+      ${rows||'<div class="analyze-note">数えられる本文がありませんでした</div>'}
     </div>
-
-    <div class="analyze-card">
-      <div class="analyze-card-title"><span class="mi mi-sm">auto_stories</span>文章タイプ</div>
-      <div><span class="analyze-tag">${r.type}</span></div>
-      <div class="analyze-note" style="margin-top:8px">${r.typeNote}</div>
-    </div>
-
-    ${r.topWords.length?`<div class="analyze-card">
-      <div class="analyze-card-title"><span class="mi mi-sm">sort</span>頻出単語 TOP10</div>
-      <div class="analyze-word-list">${r.topWords.map(([w,c])=>`<span class="analyze-word-chip">${esc(w)} <b>${c}</b></span>`).join('')}</div>
-    </div>`:''}
-  ${r.topAdverbs&&r.topAdverbs.length?`<div class="analyze-card">
-      <div class="analyze-card-title"><span class="mi mi-sm">format_italic</span>副詞の頻出 TOP${r.topAdverbs.length}</div>
-      <div class="analyze-note" style="margin-bottom:8px">多用すると説明的・冗長になりやすい副詞です</div>
-      <div class="analyze-word-list">${r.topAdverbs.map(([w,c])=>`<span class="analyze-word-chip">${esc(w)} <b>${c}</b></span>`).join('')}</div>
-    </div>`:''}
   `;
 }
 
