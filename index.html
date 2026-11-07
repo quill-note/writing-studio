@@ -3620,7 +3620,14 @@ function ncAnalyzeScenes(text){
     const first=(t.split('\n').map(l=>l.trim()).find(l=>l)||'');
     return {head:first.length>16?first.slice(0,16)+'…':first, chars:c.chars, dialog:c.dialog};
   }).filter(sc=>sc.chars>0);
-  return {list:scenes, byDelim, dlm};
+  // 前半・後半：本文の文字数でちょうど半分の位置で原文を切って数える
+  const body=dlm&&byDelim? text.split(dlm).join('') : text;
+  const totalC=ncCountChars(body).chars; let cnt=0, cut=body.length;
+  for(let k=0;k<body.length;k++){ if(!/[\s　]/.test(body[k])){ cnt++; if(cnt>=totalC/2){ cut=k+1; break; } } }
+  // 会話の途中で切れないよう、切る位置を行末までずらす
+  const nl=body.indexOf('\n',cut); if(nl!==-1) cut=nl;
+  const ha=ncCountChars(body.slice(0,cut)), hb=ncCountChars(body.slice(cut));
+  return {list:scenes, byDelim, dlm, half:{a:{c:ha.chars,d:ha.dialog},b:{c:hb.chars,d:hb.dialog}}};
 }
 
 // 会話率の目安ラベル（20〜35%を標準とする）
@@ -3651,15 +3658,7 @@ function renderAnalyzeResult(r){
   const max=Math.max(...list.map(x=>x.chars),1);
   const avg=total/(list.length||1);
 
-  // 前半・後半（文字数でちょうど半分のところで分けて比較）
-  let half={a:{c:0,d:0},b:{c:0,d:0}}, run=0;
-  list.forEach(x=>{
-    const mid=total/2;
-    if(run+x.chars<=mid){half.a.c+=x.chars;half.a.d+=x.dialog;}
-    else if(run>=mid){half.b.c+=x.chars;half.b.d+=x.dialog;}
-    else{const ra=(mid-run)/x.chars;half.a.c+=x.chars*ra;half.a.d+=x.dialog*ra;half.b.c+=x.chars*(1-ra);half.b.d+=x.dialog*(1-ra);}
-    run+=x.chars;
-  });
+  const half=sc.half||{a:{c:0,d:0},b:{c:0,d:0}};
   const hr=h=>h.c?(h.d/h.c*100).toFixed(1):'0.0';
   const diff=(+hr(half.b))-(+hr(half.a));
   const tempoNote = diff<=-8 ? '<div class="analyze-note" style="color:#e87b6b;font-weight:700">後半で会話がぐっと減っています。地の文が重くなってテンポが落ちていないか、確かめてみてください。</div>'
