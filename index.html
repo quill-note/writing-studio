@@ -3667,14 +3667,14 @@ function renderAnalyzeResult(r){
 
   const rows=list.map((x,i)=>{
     const pct=x.chars/total*100;
-    const isMax=x.chars===max && list.length>1;
+    const isMax=x.chars===max && list.length>1 && sc.byDelim;
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text2)">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mincho)">${sc.byDelim?'場面':'区間'}${i+1}${isMax?'<span class="analyze-tag" style="margin-left:6px;font-size:10px;padding:1px 6px">最多</span>':''}　<span style="color:var(--text3)">${esc(x.head)}</span></span>
         <span style="flex-shrink:0;color:var(--text3)">${x.chars.toLocaleString()}字（${pct.toFixed(0)}%）</span>
       </div>
       <div class="analyze-bar-wrap" style="height:10px"><div class="analyze-bar" style="width:${x.chars/max*100}%"></div></div>
-      ${list.length>1?'<div class="analyze-note" style="margin-top:0">長さ'+ncBadge(ncLenLabel(x.chars,avg))+'</div>':''}
+      ${list.length>1&&sc.byDelim?'<div class="analyze-note" style="margin-top:0">長さ'+ncBadge(ncLenLabel(x.chars,avg))+'</div>':''}
     </div>`;
   }).join('');
 
@@ -3689,7 +3689,8 @@ function renderAnalyzeResult(r){
 
     <div class="analyze-card">
       <div class="analyze-card-title"><span class="mi mi-sm">bar_chart</span>${sc.byDelim?'場面ごとの配分（区切り：'+esc(sc.dlm)+'）':'区間ごとの配分（5等分）'}</div>
-      <div class="analyze-note" style="margin:0 0 10px">バーの長さ＝文字数。長さのラベルは場面の平均と比べた目安です（1.5倍以上で長め・半分以下で短め）。一番書きたい場面に一番文字数がかかっているか、後半が急に薄くなっていないかを見る目安にどうぞ。</div>
+      ${sc.byDelim?'':'<div class="analyze-note" style="margin:0 0 10px;color:var(--text2)">区切り記号が見つからなかったので、ほぼ同じ文字数の5区間に分けています。どこまでが何の場面かの目印としてお使いください（長さの比較はできません）。</div>'}
+      <div class="analyze-note" style="margin:0 0 10px;${sc.byDelim?'':'display:none'}">バーの長さ＝文字数。長さのラベルは場面の平均と比べた目安です（1.5倍以上で長め・半分以下で短め）。一番書きたい場面に一番文字数がかかっているか、後半が急に薄くなっていないかを見る目安にどうぞ。</div>
       ${rows||'<div class="analyze-note">数えられる本文がありませんでした</div>'}
     </div>
   `;
