@@ -3623,6 +3623,23 @@ function ncAnalyzeScenes(text){
   return {list:scenes, byDelim, dlm};
 }
 
+// 会話率の目安ラベル（20〜35%を標準とする）
+function ncDialogLabel(rate){
+  if(rate<15) return {t:'少なめ',c:'#7b9fd4'};
+  if(rate<20) return {t:'やや少なめ',c:'#9ab3d9'};
+  if(rate<=35) return {t:'ちょうどいい',c:'var(--primary)'};
+  if(rate<=50) return {t:'やや多め',c:'#e8a090'};
+  return {t:'多め',c:'#e87b6b'};
+}
+// 場面の長さラベル（場面の平均文字数と比べる）
+function ncLenLabel(chars,avg){
+  const r=chars/avg;
+  if(r>=1.5) return {t:'長め',c:'#e8a090'};
+  if(r<=0.5) return {t:'短め',c:'#7b9fd4'};
+  return {t:'ちょうどいい',c:'var(--primary)'};
+}
+function ncBadge(l){return `<span style="display:inline-block;font-size:10px;padding:1px 7px;border-radius:8px;border:1px solid ${l.c};color:${l.c};margin-left:4px;font-weight:700;white-space:nowrap">${l.t}</span>`;}
+
 function renderAnalyzeResult(r){
   const el=document.getElementById('analyze-result');
   if(!el)return;
@@ -3632,6 +3649,7 @@ function renderAnalyzeResult(r){
   const totalDlg=list.reduce((a,b)=>a+b.dialog,0);
   const dialogRate=totalDlg/total*100;
   const max=Math.max(...list.map(x=>x.chars),1);
+  const avg=total/(list.length||1);
 
   // 前半・後半（文字数でちょうど半分のところで分けて比較）
   let half={a:{c:0,d:0},b:{c:0,d:0}}, run=0;
@@ -3653,21 +3671,21 @@ function renderAnalyzeResult(r){
         <span style="flex-shrink:0;color:var(--text3)">${x.chars.toLocaleString()}字（${pct.toFixed(0)}%）</span>
       </div>
       <div class="analyze-bar-wrap" style="height:10px;position:relative"><div class="analyze-bar" style="width:${x.chars/max*100}%;opacity:.35"></div><div class="analyze-bar" style="position:absolute;top:0;left:0;width:${x.chars/max*100*dr/100}%"></div></div>
-      <div class="analyze-note" style="margin-top:0">会話率 ${dr.toFixed(0)}%</div>
+      <div class="analyze-note" style="margin-top:0">${list.length>1?'長さ'+ncBadge(ncLenLabel(x.chars,avg))+'　':''}会話率 ${dr.toFixed(0)}%${ncBadge(ncDialogLabel(dr))}</div>
     </div>`;
   }).join('');
 
   el.innerHTML = `
     <div class="analyze-card">
       <div class="analyze-card-title"><span class="mi mi-sm">chat_bubble_outline</span>会話率</div>
-      <div class="analyze-value">${dialogRate.toFixed(1)}<span class="analyze-value-unit">%</span></div>
+      <div class="analyze-value">${dialogRate.toFixed(1)}<span class="analyze-value-unit">%</span>${ncBadge(ncDialogLabel(dialogRate))}</div>
       <div class="analyze-bar-wrap"><div class="analyze-bar" style="width:${Math.min(dialogRate,100)}%"></div></div>
-      <div class="analyze-note">前半 ${hr(half.a)}% → 後半 ${hr(half.b)}%（文字数で半分に分けたとき）<br>目安：20〜35%が標準的な小説 / 35〜50%がライトノベル寄り</div>
+      <div class="analyze-note">前半 ${hr(half.a)}%${ncBadge(ncDialogLabel(+hr(half.a)))} → 後半 ${hr(half.b)}%${ncBadge(ncDialogLabel(+hr(half.b)))}（文字数で半分に分けたとき）<br>目安：20〜35%が標準的な小説 / 35〜50%がライトノベル寄り</div>
     </div>
 
     <div class="analyze-card">
       <div class="analyze-card-title"><span class="mi mi-sm">bar_chart</span>${sc.byDelim?'場面ごとの配分（区切り：'+esc(sc.dlm)+'）':'区間ごとの配分（5等分）'}</div>
-      <div class="analyze-note" style="margin:0 0 10px">バーの長さ＝文字数、濃い部分＝そのうちの会話。一番書きたい場面に一番文字数がかかっているか、後半が急に薄くなっていないかを見る目安にどうぞ。</div>
+      <div class="analyze-note" style="margin:0 0 10px">バーの長さ＝文字数、濃い部分＝そのうちの会話。長さは場面の平均と比べた目安（1.5倍以上で長め・半分以下で短め）、会話率は20〜35%をちょうどいいとしています。一番書きたい場面に一番文字数がかかっているか、後半が急に薄くなっていないかを見る目安にどうぞ。</div>
       ${rows||'<div class="analyze-note">数えられる本文がありませんでした</div>'}
     </div>
   `;
